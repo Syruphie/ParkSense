@@ -1,11 +1,13 @@
 import BottomNav from "@/components/BottomNav";
 import SearchPopup from "@/components/SearchPopup"; // adjust if path differs
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router"; // ⬅️ Add this
 import { useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function MapPage() {
   const [showSearch, setShowSearch] = useState(false);
+  const router = useRouter(); // ⬅️ Add this
 
   return (
     <View style={styles.container}>
@@ -16,16 +18,20 @@ export default function MapPage() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Map</Text>
         <Image
-          source={{
-            uri: "https://i.pravatar.cc/100?img=12", // avatar placeholder
-          }}
+          source={{ uri: "https://i.pravatar.cc/100?img=12" }}
           style={styles.avatar}
         />
       </View>
 
       {/* Map Placeholder */}
       <View style={styles.mapArea}>
-        <Text style={{ color: "#aaa" }}>Map goes here</Text>
+        <TouchableOpacity
+          onPress={() => router.push("/ParkingDetails")}
+          style={styles.marker}
+        >
+          <Ionicons name="navigate" size={20} color="white" />
+          <Text style={styles.markerText}>CRA Lot 888</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Search Popup */}
@@ -97,5 +103,18 @@ const styles = StyleSheet.create({
     color: "white",
     marginLeft: 6,
     fontSize: 14,
+  },
+  marker: {
+    backgroundColor: "#84ABFF",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  markerText: {
+    color: "white",
+    fontWeight: "600",
+    marginLeft: 6,
   },
 });
