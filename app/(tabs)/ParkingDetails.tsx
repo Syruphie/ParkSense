@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
   Image,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,174 +13,208 @@ export default function ParkingDetails() {
   const router = useRouter();
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Header Image */}
-        <Image
-          source={{ uri: "https://i.imgur.com/YOUR_IMAGE_ID.jpg" }}
-          style={styles.image}
-        />
+    <ScrollView style={styles.container}>
+      {/* Header Image */}
+      <Image
+        source={{
+          uri: "https://images.unsplash.com/photo-1616352553120-8632cf961af4",
+        }}
+        style={styles.image}
+      />
 
-        {/* Back Button */}
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={20} color="#000" />
-          <Text style={styles.backText}>Parking Details</Text>
-        </Pressable>
+      {/* Back Button */}
+      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <Ionicons name="chevron-back" size={24} color="black" />
+        <Text style={styles.backText}>Parking Details</Text>
+      </TouchableOpacity>
 
-        {/* Title Card */}
-        <View style={styles.card}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.lotName}>CRA Lot 888</Text>
-            <Text style={styles.address}>
+      {/* Info Card */}
+      <View style={styles.card}>
+        <View style={styles.titleRow}>
+          <View>
+            <Text style={styles.title}>CRA Lot 888</Text>
+            <Text style={styles.subtitle}>
               109 Riverfront Ave SE, Calgary, AB T2G 0B3
             </Text>
-            <View style={styles.statsRow}>
-              <Text style={styles.rating}>4.8</Text>
-              <Ionicons name="star-outline" size={16} color="gray" />
-              <Ionicons name="star-outline" size={16} color="gray" />
-              <Ionicons name="star-outline" size={16} color="gray" />
-              <Text style={styles.reviewText}>(98 reviews)</Text>
+            <View style={styles.infoRow}>
+              <Ionicons name="star" size={14} color="#aaa" />
+              <Ionicons name="star-outline" size={14} color="#aaa" />
+              <Ionicons name="star-outline" size={14} color="#aaa" />
+              <Text style={styles.grayText}>(98 reviews)</Text>
             </View>
-            <View style={styles.statsRow}>
-              <Ionicons name="location-outline" size={16} color="black" />
-              <Text style={styles.meta}>1.2km</Text>
+            <View style={styles.infoRow}>
+              <Ionicons name="location" size={16} color="black" />
+              <Text style={styles.detailText}>1.2km</Text>
               <Ionicons
-                name="car-outline"
+                name="car"
                 size={16}
                 color="black"
                 style={{ marginLeft: 10 }}
               />
-              <Text style={styles.meta}>7 Mins</Text>
+              <Text style={styles.detailText}>7 Mins</Text>
             </View>
           </View>
-          <View style={styles.navIcon}>
+          <TouchableOpacity style={styles.goBtn}>
             <Ionicons name="navigate" size={24} color="#fff" />
-          </View>
+          </TouchableOpacity>
         </View>
+      </View>
 
-        {/* Info Section */}
-        <Text style={styles.sectionTitle}>Info</Text>
-        <View style={styles.infoTable}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Parking</Text>
-            <Text style={styles.infoValue}>Per Hour</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Cost</Text>
-            <Text style={styles.infoValue}>$7</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Max</Text>
-            <Text style={styles.infoValue}>10 hour</Text>
-          </View>
+      {/* Rate Table */}
+      <View style={styles.table}>
+        <Text style={styles.tableHeader}>Info</Text>
+        <View style={styles.tableRow}>
+          <Text style={styles.tableCell}>Parking</Text>
+          <Text style={styles.tableCellRight}>Per Hour</Text>
         </View>
+        <View style={styles.tableRow}>
+          <Text style={styles.tableCell}>Cost</Text>
+          <Text style={styles.tableCellRight}>$7</Text>
+        </View>
+        <View style={styles.tableRow}>
+          <Text style={styles.tableCell}>Max</Text>
+          <Text style={styles.tableCellRight}>10 hour</Text>
+        </View>
+      </View>
 
-        {/* About Section */}
+      {/* About */}
+      <View style={styles.aboutSection}>
         <Text style={styles.sectionTitle}>About</Text>
         <Text style={styles.aboutText}>
           Conveniently located near shops, restaurants, and office buildings,
           this outdoor lot offers 24/7 access with both hourly and daily rates.
           Well-lit and regularly patrolled, it features accessible spots, EV
-          charging stations, and contactless payment options. Conveniently
-          located near shops, restaurants, and office buildings, this outdoor
-          lot offers 24/7 access with both hourly and daily rates.
+          charging stations, and contactless payment options.
         </Text>
+      </View>
 
-        {/* Book Button */}
-        <TouchableOpacity style={styles.bookBtn}>
-          <Text style={styles.bookBtnText}>Book Now</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+      {/* Book Now */}
+      <TouchableOpacity style={styles.bookBtn}>
+        <Text style={styles.bookText}>Book Now</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  scroll: { paddingBottom: 80 },
-  image: { width: "100%", height: 200 },
-  backButton: {
-    position: "absolute",
-    top: 40,
-    left: 16,
-    flexDirection: "row",
-    backgroundColor: "#BAD0FF",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
   },
-  backText: { fontWeight: "bold", fontSize: 14, marginLeft: 6 },
+  image: {
+    width: "100%",
+    height: 200,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  backBtn: {
+    position: "absolute",
+    top: 50,
+    left: 16,
+    backgroundColor: "#BAD0FF",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  backText: {
+    fontWeight: "600",
+    marginLeft: 4,
+  },
   card: {
+    backgroundColor: "#f9f9f9",
     margin: 16,
-    backgroundColor: "#f1f1f1",
     borderRadius: 8,
     padding: 16,
-    flexDirection: "row",
   },
-  lotName: { fontSize: 18, fontWeight: "bold" },
-  address: { fontSize: 14, color: "#555", marginVertical: 4 },
-  statsRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
-  rating: { marginRight: 4, fontSize: 14 },
-  reviewText: { marginLeft: 6, fontSize: 13, color: "#888" },
-  meta: { fontSize: 13, marginLeft: 4 },
-  navIcon: {
-    backgroundColor: "#84ABFF",
-    borderRadius: 20,
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 4,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 2,
+  },
+  grayText: {
+    color: "#aaa",
+    fontSize: 12,
+    marginLeft: 6,
+  },
+  detailText: {
+    fontSize: 13,
+    marginLeft: 4,
+  },
+  goBtn: {
     width: 40,
     height: 40,
+    backgroundColor: "#84ABFF",
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 12,
+  },
+  table: {
+    marginHorizontal: 16,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#ccc",
+  },
+  tableHeader: {
+    fontWeight: "bold",
+    fontSize: 16,
+    marginVertical: 10,
+  },
+  tableRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    backgroundColor: "#f9f9f9",
+    paddingHorizontal: 12,
+  },
+  tableCell: {
+    fontWeight: "bold",
+  },
+  tableCellRight: {
+    fontWeight: "600",
+  },
+  aboutSection: {
+    padding: 16,
   },
   sectionTitle: {
     fontWeight: "bold",
     fontSize: 16,
-    marginTop: 10,
-    marginHorizontal: 16,
-    borderBottomWidth: 1,
-    borderColor: "#ccc",
-    paddingBottom: 4,
+    marginBottom: 8,
   },
-  infoTable: {
-    marginHorizontal: 16,
-    backgroundColor: "#f6f6f6",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-  },
-  infoLabel: { fontWeight: "bold", fontSize: 14 },
-  infoValue: { fontSize: 14 },
   aboutText: {
-    margin: 16,
     fontSize: 14,
     lineHeight: 20,
     color: "#333",
   },
   bookBtn: {
-    backgroundColor: "#84ABFF",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 10,
+    backgroundColor: "#609CFF",
     alignSelf: "center",
+    marginVertical: 20,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 10,
+    elevation: 2,
     shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    marginBottom: 20,
   },
-  bookBtnText: {
+  bookText: {
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,

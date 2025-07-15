@@ -17,6 +17,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="map"
         options={{
+          headerShown: false,
           title: "Map",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="map-outline" size={size} color={color} />
@@ -34,7 +35,7 @@ export default function TabsLayout() {
           tabBarStyle: { display: "none" }, // optional
         }}
       />
-     <Tabs.Screen
+      <Tabs.Screen
         name="record"
         options={{
           title: "Record",
@@ -43,7 +44,6 @@ export default function TabsLayout() {
           ),
           tabBarStyle: { display: "none" }, // optional
         }}
-      />
       />
     </Tabs>
   );

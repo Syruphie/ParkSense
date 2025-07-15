@@ -1,120 +1,78 @@
 import BottomNav from "@/components/BottomNav";
-import SearchPopup from "@/components/SearchPopup"; // adjust if path differs
+import SearchPopup from "@/components/SearchPopup";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router"; // ⬅️ Add this
 import { useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
+import MapView, { MapPressEvent, Marker } from "react-native-maps";
 
 export default function MapPage() {
   const [showSearch, setShowSearch] = useState(false);
-  const router = useRouter(); // ⬅️ Add this
+  const [marker, setMarker] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
+  const handleMapPress = (event: MapPressEvent) => {
+    const { coordinate } = event.nativeEvent;
+    setMarker(coordinate);
+  };
 
   return (
     <View style={styles.container}>
-      {/* Top Bar */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setShowSearch(true)}>
-          <Ionicons name="search" size={26} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Map</Text>
-        <Image
-          source={{ uri: "https://i.pravatar.cc/100?img=12" }}
-          style={styles.avatar}
-        />
-      </View>
+      {/* Map Layer */}
+      <MapView
+        style={styles.map}
+        initialRegion={{
+          latitude: 51.0447,
+          longitude: -114.0719,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }}
+        onPress={handleMapPress}
+        provider="google"
+      >
+        {marker && (
+          <Marker
+            coordinate={marker}
+            title="Dropped Pin"
+            description={`${marker.latitude.toFixed(
+              4
+            )}, ${marker.longitude.toFixed(4)}`}
+          />
+        )}
+      </MapView>
 
-      {/* Map Placeholder */}
-      <View style={styles.mapArea}>
-        <TouchableOpacity
-          onPress={() => router.push("/ParkingDetails")}
-          style={styles.marker}
-        >
-          <Ionicons name="navigate" size={20} color="white" />
-          <Text style={styles.markerText}>CRA Lot 888</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Search Button Layer */}
+      <TouchableOpacity
+        style={styles.searchButton}
+        onPress={() => setShowSearch(true)}
+      >
+        <Ionicons name="search" size={24} color="white" />
+      </TouchableOpacity>
 
-      {/* Search Popup */}
+      {/* Search Popup & Nav always on top */}
       <SearchPopup visible={showSearch} onClose={() => setShowSearch(false)} />
-
-      {/* Bottom Navigation */}
       <BottomNav />
     </View>
-  );
-}
-
-function QuickNav({ label }: { label: string }) {
-  return (
-    <TouchableOpacity style={styles.navButton}>
-      <Ionicons name="location-outline" size={16} color="white" />
-      <Text style={styles.navText}>{label}</Text>
-    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    position: "relative", // Ensure layering context
   },
-  header: {
+  map: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1, // Put map behind
+  },
+  searchButton: {
+    position: "absolute",
+    top: 50,
+    left: 20,
     backgroundColor: "#84B4FF",
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  headerTitle: {
-    fontSize: 20,
-    color: "white",
-    fontWeight: "600",
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#ccc",
-  },
-  mapArea: {
-    flex: 1,
-    backgroundColor: "#f2f2f2", // simulate map background
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bottomButtons: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingVertical: 12,
-    backgroundColor: "#fff",
-  },
-  navButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#84B4FF",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  navText: {
-    color: "white",
-    marginLeft: 6,
-    fontSize: 14,
-  },
-  marker: {
-    backgroundColor: "#84ABFF",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  markerText: {
-    color: "white",
-    fontWeight: "600",
-    marginLeft: 6,
+    padding: 10,
+    borderRadius: 24,
+    zIndex: 10, // Ensure it's above map
   },
 });

@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     height: "100%",
-    width: "100%",
+    width: 150,
     backgroundColor: "transparent", // default
   },
   activeInnerTab: {
