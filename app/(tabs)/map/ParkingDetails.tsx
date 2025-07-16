@@ -23,7 +23,10 @@ export default function ParkingDetails() {
       />
 
       {/* Back Button */}
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+      <TouchableOpacity
+        style={styles.backBtn}
+        onPress={() => router.push("/map/map")}
+      >
         <Ionicons name="chevron-back" size={24} color="black" />
         <Text style={styles.backText}>Parking Details</Text>
       </TouchableOpacity>

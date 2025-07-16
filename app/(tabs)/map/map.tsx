@@ -1,5 +1,6 @@
 import BottomNav from "@/components/BottomNav";
 import LocationShortcutButton from "@/components/LocationShortcutButton";
+import ParkingDetailModal from "@/components/ParkingDetailModal";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -17,6 +18,8 @@ const dummyParkingLots = [
     name: "CPA Lot 888",
     latitude: 51.0462,
     longitude: -114.0631,
+    imageUrl:
+      "https://upload.wikimedia.org/wikipedia/commons/e/e1/Calgary-Riverfront.jpg",
   },
   {
     id: "lot2",
@@ -43,6 +46,7 @@ export default function MapPage() {
     const { coordinate } = event.nativeEvent;
     setMarker(coordinate);
   };
+  const [selectedLot, setSelectedLot] = useState<any>(null);
 
   return (
     <View style={styles.container}>
@@ -79,7 +83,7 @@ export default function MapPage() {
           <Marker
             key={lot.id}
             coordinate={{ latitude: lot.latitude, longitude: lot.longitude }}
-            title={lot.name}
+            onPress={() => setSelectedLot(lot)}
           >
             <View style={styles.parkingMarker}>
               <Text style={styles.parkingText}>P</Text>
@@ -104,6 +108,20 @@ export default function MapPage() {
       </View>
 
       <BottomNav />
+
+      <ParkingDetailModal
+        visible={!!selectedLot}
+        name={selectedLot?.name}
+        address={selectedLot?.address ?? "No address"}
+        imageUrl={
+          selectedLot?.imageUrl ?? "https://via.placeholder.com/300x200"
+        }
+        onClose={() => setSelectedLot(null)}
+        onMoreDetail={() => {
+          setSelectedLot(null);
+          router.push(`/map/ParkingDetails?id=${selectedLot.id}`);
+        }}
+      />
     </View>
   );
 }

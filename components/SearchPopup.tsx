@@ -1,3 +1,6 @@
+//this is old search popup component, we dont really use this in
+// the figma design but i will keep it just in case
+
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
