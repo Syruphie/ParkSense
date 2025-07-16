@@ -1,11 +1,13 @@
 import BottomNav from "@/components/BottomNav";
-import SearchPopup from "@/components/SearchPopup";
+import LocationShortcutButton from "@/components/LocationShortcutButton";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import MapView, { MapPressEvent, Marker } from "react-native-maps";
 
 export default function MapPage() {
+  const router = useRouter();
   const [showSearch, setShowSearch] = useState(false);
   const [marker, setMarker] = useState<{
     latitude: number;
@@ -45,13 +47,18 @@ export default function MapPage() {
       {/* Search Button Layer */}
       <TouchableOpacity
         style={styles.searchButton}
-        onPress={() => setShowSearch(true)}
+        onPress={() => router.push("/Search")} // ← updated here
       >
         <Ionicons name="search" size={24} color="white" />
       </TouchableOpacity>
 
       {/* Search Popup & Nav always on top */}
-      <SearchPopup visible={showSearch} onClose={() => setShowSearch(false)} />
+      {/* <SearchPopup visible={showSearch} onClose={() => setShowSearch(false)} /> */}
+      <View style={styles.shortcutsRow}>
+        <LocationShortcutButton label="Home" onPress={() => {}} />
+        <LocationShortcutButton label="Office" onPress={() => {}} />
+        <LocationShortcutButton label="Recent Visit" onPress={() => {}} />
+      </View>
       <BottomNav />
     </View>
   );
@@ -74,5 +81,15 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 24,
     zIndex: 10, // Ensure it's above map
+  },
+  shortcutsRow: {
+    position: "absolute",
+    bottom: 80, // adjust as needed based on your BottomNav height
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    flexWrap: "wrap", // allow multiple rows
+    justifyContent: "center",
+    zIndex: 11, // ← Make sure this is above BottomNav and Map
   },
 });

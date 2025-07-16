@@ -1,14 +1,19 @@
-// app/(tabs)/_layout.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
 export default function TabsLayout() {
   return (
-    <Tabs>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: { display: "none" }, // hide by default
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
           title: "Home",
+          tabBarStyle: { display: "flex" }, // show tab bar only on index
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -17,12 +22,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="map"
         options={{
-          headerShown: false,
           title: "Map",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="map-outline" size={size} color={color} />
           ),
-          tabBarStyle: { display: "none" }, // optional
         }}
       />
       <Tabs.Screen
@@ -30,9 +33,8 @@ export default function TabsLayout() {
         options={{
           title: "Booking",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="map-outline" size={size} color={color} />
+            <Ionicons name="calendar-outline" size={size} color={color} />
           ),
-          tabBarStyle: { display: "none" }, // optional
         }}
       />
       <Tabs.Screen
@@ -40,9 +42,8 @@ export default function TabsLayout() {
         options={{
           title: "Record",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="map-outline" size={size} color={color} />
+            <Ionicons name="document-text-outline" size={size} color={color} />
           ),
-          tabBarStyle: { display: "none" }, // optional
         }}
       />
     </Tabs>
