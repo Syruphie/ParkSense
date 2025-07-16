@@ -1,9 +1,10 @@
+// import surfaceData from "@/assets/data/parks_surfaces.json";
 import BottomNav from "@/components/BottomNav";
 import LocationShortcutButton from "@/components/LocationShortcutButton";
 import ParkingDetailModal from "@/components/ParkingDetailModal";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MapView, {
   MapPressEvent,
@@ -12,28 +13,28 @@ import MapView, {
   UrlTile,
 } from "react-native-maps";
 
-const dummyParkingLots = [
-  {
-    id: "lot1",
-    name: "CPA Lot 888",
-    latitude: 51.0462,
-    longitude: -114.0631,
-    imageUrl:
-      "https://upload.wikimedia.org/wikipedia/commons/e/e1/Calgary-Riverfront.jpg",
-  },
-  {
-    id: "lot2",
-    name: "Calgary City Centre Lot",
-    latitude: 51.0453,
-    longitude: -114.0642,
-  },
-  {
-    id: "lot3",
-    name: "Lot #26 - Centre Street",
-    latitude: 51.0458,
-    longitude: -114.0685,
-  },
-];
+// const dummyParkingLots = [
+//   {
+//     id: "lot1",
+//     name: "CPA Lot 888",
+//     latitude: 51.0462,
+//     longitude: -114.0631,
+//     imageUrl:
+//       "https://upload.wikimedia.org/wikipedia/commons/e/e1/Calgary-Riverfront.jpg",
+//   },
+//   {
+//     id: "lot2",
+//     name: "Calgary City Centre Lot",
+//     latitude: 51.0453,
+//     longitude: -114.0642,
+//   },
+//   {
+//     id: "lot3",
+//     name: "Lot #26 - Centre Street",
+//     latitude: 51.0458,
+//     longitude: -114.0685,
+//   },
+// ];
 
 export default function MapPage() {
   const router = useRouter();
@@ -41,6 +42,7 @@ export default function MapPage() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [parkingLots, setParkingLots] = useState<any[]>([]);
 
   const handleMapPress = (event: MapPressEvent) => {
     const { coordinate } = event.nativeEvent;
@@ -48,9 +50,72 @@ export default function MapPage() {
   };
   const [selectedLot, setSelectedLot] = useState<any>(null);
 
+  useEffect(() => {
+    const fetchParkingZones = async () => {
+      try {
+        const response = await fetch(
+          "https://data.calgary.ca/resource/45az-7kh9.json?$limit=1000"
+        );
+        const data = await response.json();
+
+        if (!Array.isArray(data)) {
+          console.error("Expected array but got:", data);
+          return;
+        }
+
+        const parsed = data
+          .filter((item) => item.the_geom?.coordinates?.length > 0)
+          .map((item) => {
+            const line = item.the_geom.coordinates?.[0]?.[0];
+            if (!line || line.length !== 2) return null;
+
+            const [lng, lat] = line; // Geo format: [lng, lat]
+
+            return {
+              id:
+                item.globalid_guid ||
+                `${item.permit_zone}-${item.address_desc}` ||
+                Math.random().toString(),
+              name: item.zone_type || "Parking Zone",
+              latitude: lat,
+              longitude: lng,
+              address: item.address_desc || "Unknown",
+              imageUrl: "https://via.placeholder.com/300x200",
+            };
+          })
+          .filter(Boolean); // remove nulls
+
+        setParkingLots(parsed);
+      } catch (err) {
+        console.error("Failed to fetch zone data:", err);
+      }
+    };
+
+    fetchParkingZones();
+  }, []);
+
+  const renderedMarkers = useMemo(
+    () =>
+      parkingLots
+        .filter((lot) => !isNaN(lot.latitude) && !isNaN(lot.longitude))
+        .map((lot) => (
+          <Marker
+            key={lot.id}
+            coordinate={{ latitude: lot.latitude, longitude: lot.longitude }}
+            onPress={() => setSelectedLot(lot)}
+          >
+            <View style={styles.parkingMarker}>
+              <Text style={styles.parkingText}>P</Text>
+            </View>
+          </Marker>
+        )),
+    [parkingLots]
+  );
+
   return (
     <View style={styles.container}>
       <MapView
+        key={parkingLots.length > 0 ? "loaded" : "loading"}
         style={styles.map}
         initialRegion={{
           latitude: 51.0447,
@@ -78,7 +143,7 @@ export default function MapPage() {
           />
         )}
 
-        {/* Dummy parking markers */}
+        {/* Dummy parking markers
         {dummyParkingLots.map((lot) => (
           <Marker
             key={lot.id}
@@ -89,7 +154,8 @@ export default function MapPage() {
               <Text style={styles.parkingText}>P</Text>
             </View>
           </Marker>
-        ))}
+        ))} */}
+        {renderedMarkers}
       </MapView>
 
       {/* Search Button */}
