@@ -19,7 +19,7 @@ export default function HomeScreen() {
           this is just a basic map page structure like how to UI should look
           like
         </Text>
-        <Button title="View Map" onPress={() => router.push("/map/map")} />
+        <Button title="View Map" onPress={() => router.push("/map")} />
       </View>
       <View style={styles.buttonContainer}>
         <Button title="Book a Spot" onPress={() => router.push("/booking")} />
