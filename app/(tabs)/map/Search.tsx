@@ -31,7 +31,7 @@ export default function SearchPage() {
       {/* Top Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity
-          onPress={() => router.push("/map")}
+          onPress={() => router.push("/map/map")}
           style={styles.backBtn}
         >
           <Ionicons name="chevron-back" size={22} color="black" />

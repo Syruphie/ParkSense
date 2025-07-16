@@ -6,15 +6,33 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>🚗 Parking App</Text>
+      <Text style={styles.title}>
+        This is a temporary page for me to test all the page i made so far ,
+        please change this page to login and redirect to map.tsx as a landing
+        page after sign in
+      </Text>
+      {/* <Text style={styles.title}>🚗 Parking App</Text> */}
+
       <View style={styles.buttonContainer}>
-        <Button title="View Map" onPress={() => router.push("/map")} />
+        <Text>
+          {" "}
+          this is just a basic map page structure like how to UI should look
+          like
+        </Text>
+        <Button title="View Map" onPress={() => router.push("/map/map")} />
       </View>
       <View style={styles.buttonContainer}>
         <Button title="Book a Spot" onPress={() => router.push("/booking")} />
       </View>
       <View style={styles.buttonContainer}>
         <Button title="My Records" onPress={() => router.push("/record")} />
+      </View>
+      <Text> this is a responsive map page </Text>
+      <View style={styles.buttonContainer}>
+        <Button
+          title="map TESTING"
+          onPress={() => router.push("/map/openStreetMap")}
+        />
       </View>
     </View>
   );
