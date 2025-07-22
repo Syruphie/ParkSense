@@ -5,12 +5,11 @@ export interface UserDetails {
   FirstName: string;
   LastName: string;
   Email: string;
-  password?: string; // optional when updating
+  password?: string;
 }
 
 const tableName = "user_details";
 
-// CREATE a new user
 export const createUser = async (user: UserDetails) => {
   const { data, error } = await supabase
     .from(tableName)
@@ -20,7 +19,6 @@ export const createUser = async (user: UserDetails) => {
   return data;
 };
 
-// READ all users
 export const getUsers = async () => {
   const { data, error } = await supabase
     .from(tableName)
@@ -30,7 +28,6 @@ export const getUsers = async () => {
   return data;
 };
 
-// UPDATE user by UUID
 export const updateUser = async (
   uuid: string,
   updates: Partial<UserDetails>
@@ -44,7 +41,6 @@ export const updateUser = async (
   return data;
 };
 
-// DELETE user by UUID
 export const deleteUser = async (uuid: string) => {
   const { error } = await supabase.from(tableName).delete().eq("uuid", uuid);
   if (error) throw error;
