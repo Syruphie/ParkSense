@@ -68,6 +68,7 @@ export default function ParkingDetails() {
         zone_type: "Parking Zone",
         editorial_summary: null,
       });
+
       const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=0&pitch=10&radius=50&key=${apiKey}`;
       setImageUrl(streetViewUrl);
 
@@ -139,9 +140,19 @@ export default function ParkingDetails() {
         });
 
         if (matched) {
-          console.log("Matched record:", matched);
+          console.log("Matched record by lat/lng:", matched);
+          setLot({
+            ...matched,
+            address_desc: matched?.address_desc || "Unknown",
+            zone_type: "Parking Zone",
+            editorial_summary: null,
+          });
         } else {
-          console.warn("No matching Calgary parking zone found within 200m");
+          setLot({
+            zone_type: "Parking Zone",
+            address_desc: "No matching parking zone within 200m.",
+            editorial_summary: null,
+          });
         }
 
         setLot({
@@ -248,10 +259,16 @@ export default function ParkingDetails() {
     );
   }
 
-  if (!lot) {
+  if (!lot || lot.address_desc?.includes("No matching")) {
     return (
       <View style={styles.center}>
-        <Text>Parking zone not found.</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color="black" />
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+        <Text style={{ marginTop: 100 }}>
+          {lot?.address_desc ?? "Parking zone not found."}
+        </Text>
       </View>
     );
   }
@@ -290,7 +307,22 @@ export default function ParkingDetails() {
         }
       /> */}
 
-      <TouchableOpacity style={styles.bookBtn}>
+      <TouchableOpacity
+        style={styles.bookBtn}
+        onPress={() =>
+          router.push({
+            pathname: "/booking",
+            params: {
+              address_desc: lot?.address_desc,
+              stall_id: lot?.stall_id ?? "A31",
+              license_plate: "CST309",
+              html_zone_rate: lot?.html_zone_rate,
+              max_time: lot?.max_time,
+              price_zone: lot?.price_zone,
+            },
+          })
+        }
+      >
         <Text style={styles.bookText}>Book Now</Text>
       </TouchableOpacity>
     </ScrollView>
