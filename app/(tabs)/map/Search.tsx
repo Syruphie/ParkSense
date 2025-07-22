@@ -4,10 +4,14 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -67,63 +71,81 @@ export default function SearchPage() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Back Button */}
-      <TouchableOpacity
-        onPress={() => router.push("/map")}
-        style={styles.backBtn}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <TouchableWithoutFeedback
+        onPress={() => {
+          Keyboard.dismiss();
+          setResults([]); // clear search results
+        }}
       >
-        <Ionicons name="chevron-back" size={22} color="#333" />
-        <Text style={styles.backText}>Search</Text>
-      </TouchableOpacity>
+        <SafeAreaView style={styles.container}>
+          {/* Back Button */}
+          <TouchableOpacity
+            onPress={() => router.push("/map")}
+            style={styles.backBtn}
+          >
+            <Ionicons name="chevron-back" size={22} color="#333" />
+            <Text style={styles.backText}>Search</Text>
+          </TouchableOpacity>
 
-      {/* Search Bar */}
-      <View style={styles.searchBar}>
-        <TextInput
-          placeholder="Search location..."
-          placeholderTextColor="#666"
-          value={query}
-          onChangeText={setQuery}
-          onSubmitEditing={handleSearch}
-          style={styles.searchInput}
-        />
-        <TouchableOpacity
-          style={styles.iconBtn}
-          onPress={() => setFilterVisible(true)}
-        >
-          <Ionicons name="filter" size={22} color="white" />
-        </TouchableOpacity>{" "}
-        <TouchableOpacity style={styles.iconBtn} onPress={handleSearch}>
-          <Ionicons name="search" size={22} color="white" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Results */}
-      <FlatList
-        data={results.length > 0 ? results : recentSearches}
-        keyExtractor={(item, index) =>
-          typeof item === "string" ? index.toString() : item.place_id
-        }
-        renderItem={({ item }) =>
-          typeof item === "string" ? (
-            <TouchableOpacity onPress={() => setQuery(item)}>
-              <Text style={styles.recentItem}>{item}</Text>
+          {/* Search Bar */}
+          <View style={styles.searchBar}>
+            <TextInput
+              placeholder="Search location..."
+              placeholderTextColor="#666"
+              value={query}
+              onChangeText={setQuery}
+              onSubmitEditing={handleSearch}
+              style={styles.searchInput}
+            />
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => setFilterVisible(true)}
+            >
+              <Ionicons name="filter" size={22} color="white" />
             </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={() => handleSelectResult(item)}>
-              <Text style={styles.recentItem}>{item.description}</Text>
+            <TouchableOpacity style={styles.iconBtn} onPress={handleSearch}>
+              <Ionicons name="search" size={22} color="white" />
             </TouchableOpacity>
-          )
-        }
-        contentContainerStyle={styles.recentList}
-      />
+          </View>
 
-      {/* Filter Popup Modal */}
-      <FilterPopup
-        visible={filterVisible}
-        onClose={() => setFilterVisible(false)}
-      />
-    </SafeAreaView>
+          {/* Results */}
+          <FlatList
+            data={results.length > 0 ? results : recentSearches}
+            keyExtractor={(item, index) =>
+              typeof item === "string" ? index.toString() : item.place_id
+            }
+            renderItem={({ item }) =>
+              typeof item === "string" ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    setQuery(item);
+                    addToRecent(item);
+                    handleSearch();
+                  }}
+                >
+                  <Text style={styles.recentItem}>{item}</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity onPress={() => handleSelectResult(item)}>
+                  <Text style={styles.recentItem}>{item.description}</Text>
+                </TouchableOpacity>
+              )
+            }
+            contentContainerStyle={styles.recentList}
+          />
+
+          {/* Filter Popup Modal */}
+          <FilterPopup
+            visible={filterVisible}
+            onClose={() => setFilterVisible(false)}
+          />
+        </SafeAreaView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 

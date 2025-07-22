@@ -1,6 +1,7 @@
 "use client";
 
 import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -14,12 +15,26 @@ import {
 } from "react-native";
 
 const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "";
-if (!apiKey) console.warn("\u26A0\uFE0F GOOGLE_API_KEY is missing!");
+if (!apiKey) console.warn("⚠️ GOOGLE_API_KEY is missing!");
+
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const toRad = (x) => (x * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 export default function ParkingDetails() {
   const router = useRouter();
   const { id, place_id } = useLocalSearchParams();
   const [lot, setLot] = useState<any>(null);
+  const [distanceKm, setDistanceKm] = useState<string | null>(null);
+  const [durationText, setDurationText] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageUrl, setImageUrl] = useState(
     "https://via.placeholder.com/300x200"
@@ -52,11 +67,44 @@ export default function ParkingDetails() {
 
           const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=0&pitch=10&radius=50&key=${apiKey}`;
           setImageUrl(streetViewUrl);
+
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === "granted") {
+            const userLocation = await Location.getCurrentPositionAsync({});
+            const distance = haversineDistance(
+              userLocation.coords.latitude,
+              userLocation.coords.longitude,
+              lat,
+              lng
+            );
+            setDistanceKm(distance.toFixed(2));
+
+            const driveTime = await fetchDrivingTime(
+              userLocation.coords.latitude,
+              userLocation.coords.longitude,
+              lat,
+              lng
+            );
+            setDurationText(driveTime);
+          }
         }
       } catch (err) {
         console.error("Google Place Details error:", err);
       } finally {
         setLoading(false);
+      }
+    };
+
+    const fetchDrivingTime = async (fromLat, fromLng, toLat, toLng) => {
+      try {
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/directions/json?origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&mode=driving&key=${apiKey}`
+        );
+        const json = await res.json();
+        return json.routes?.[0]?.legs?.[0]?.duration?.text || null;
+      } catch (error) {
+        console.warn("Error fetching drive time:", error);
+        return null;
       }
     };
 
@@ -75,12 +123,32 @@ export default function ParkingDetails() {
 
         if (found) {
           setLot(found);
-
           const coords = found.the_geom?.coordinates?.[0]?.[0];
           if (coords?.length === 2 && apiKey) {
             const [lng, lat] = coords;
             const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=0&pitch=10&radius=50&key=${apiKey}`;
             setImageUrl(streetViewUrl);
+
+            const { status } =
+              await Location.requestForegroundPermissionsAsync();
+            if (status === "granted") {
+              const userLocation = await Location.getCurrentPositionAsync({});
+              const distance = haversineDistance(
+                userLocation.coords.latitude,
+                userLocation.coords.longitude,
+                lat,
+                lng
+              );
+              setDistanceKm(distance.toFixed(2));
+
+              const driveTime = await fetchDrivingTime(
+                userLocation.coords.latitude,
+                userLocation.coords.longitude,
+                lat,
+                lng
+              );
+              setDurationText(driveTime);
+            }
           }
         } else {
           setLot(null);
@@ -135,14 +203,12 @@ export default function ParkingDetails() {
         <View style={styles.metaRow}>
           <Ionicons name="location" size={16} />
           <Text style={styles.metaText}>
-            {lot.the_geom?.coordinates?.[0]?.[0]?.length === 2 ? (
-              <Text style={styles.metaText}>
-                Lat/Lng: {lot.the_geom.coordinates[0][0][1].toFixed(5)},{" "}
-                {lot.the_geom.coordinates[0][0][0].toFixed(5)}
-              </Text>
-            ) : (
-              <Text style={styles.metaText}>Coordinates not available</Text>
-            )}
+            {distanceKm ? `${distanceKm} km` : "Distance not available"}
+          </Text>
+
+          <Ionicons name="car" size={16} style={{ marginLeft: 16 }} />
+          <Text style={styles.metaText}>
+            {durationText || "Drive time not available"}
           </Text>
         </View>
       </View>

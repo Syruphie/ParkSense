@@ -18,7 +18,8 @@ export default function MapLayout() {
         name="ParkingDetails"
         options={{ title: "Parking Details", headerShown: false }}
       />
-      <Stack.Screen name="openStreetMap" options={{ title: "Street Map" }} />
+      <Stack.Screen name="openStreetMap" options={{ title: "Street Map" ,          headerShown: false 
+}} />
     </Stack>
   );
 }

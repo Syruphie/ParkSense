@@ -2,7 +2,7 @@ import LocationShortcutButton from "@/components/LocationShortcutButton";
 import ParkingDetailModal from "@/components/ParkingDetailModal";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   SafeAreaView,
   StatusBar,
@@ -21,7 +21,26 @@ const getStreetViewImage = (lat, lng, apiKey) => {
   return `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=90&pitch=10&key=${apiKey}`;
 };
 
+const SHORTCUTS = {
+  Home: {
+    label: "Home",
+    latitude: 51.045, // 9 Ave SW
+    longitude: -114.065,
+  },
+  Office: {
+    label: "Office",
+    latitude: 51.0465, // 2 St SW
+    longitude: -114.063,
+  },
+  Recent: {
+    label: "Recent Visit",
+    latitude: 51.051, // 25 Ave SW
+    longitude: -114.071,
+  },
+};
+
 export default function MapPage() {
+  const mapRef = useRef(null);
   const router = useRouter();
   const [marker, setMarker] = useState(null);
   const [parkingLots, setParkingLots] = useState([]);
@@ -32,6 +51,17 @@ export default function MapPage() {
     setMarker(coordinate);
   };
 
+  const flyTo = ({ latitude, longitude }) => {
+    mapRef.current?.animateToRegion(
+      {
+        latitude,
+        longitude,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
+      },
+      1000
+    );
+  };
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
   if (!apiKey) console.warn("⚠️ GOOGLE_API_KEY is missing!");
 
@@ -119,6 +149,7 @@ export default function MapPage() {
         onPress={handleMapPress}
         provider={PROVIDER_DEFAULT}
         mapType="none"
+        ref={mapRef}
       >
         <UrlTile
           urlTemplate="http://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -146,9 +177,18 @@ export default function MapPage() {
       </TouchableOpacity>
 
       <View style={styles.shortcutsRow}>
-        <LocationShortcutButton label="Home" onPress={() => {}} />
-        <LocationShortcutButton label="Office" onPress={() => {}} />
-        <LocationShortcutButton label="Recent Visit" onPress={() => {}} />
+        <LocationShortcutButton
+          label="Home"
+          onPress={() => flyTo(SHORTCUTS.Home)}
+        />
+        <LocationShortcutButton
+          label="Office"
+          onPress={() => flyTo(SHORTCUTS.Office)}
+        />
+        <LocationShortcutButton
+          label="Recent Visit"
+          onPress={() => flyTo(SHORTCUTS.Recent)}
+        />
       </View>
 
       <TouchableOpacity
@@ -156,7 +196,7 @@ export default function MapPage() {
         onPress={() => router.push("/map/ParkingList")}
       >
         <Ionicons name="list" size={20} color="white" />
-        <Text style={styles.listButtonText}>Parking List</Text>
+        <Text style={styles.listButtonText}>Dataset: Parking List</Text>
       </TouchableOpacity>
 
       <ParkingDetailModal
