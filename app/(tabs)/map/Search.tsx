@@ -1,3 +1,4 @@
+import FilterPopup from "@/components/FilterPopup"; // ✅ adjust the import path as needed
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -9,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
@@ -16,6 +18,7 @@ export default function SearchPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
+  const [filterVisible, setFilterVisible] = useState(false);
   const [recentSearches, setRecentSearches] = useState([
     "CPA lot 888",
     "116 2 Ave SW parking",
@@ -60,12 +63,11 @@ export default function SearchPage() {
 
   const handleSelectResult = (place) => {
     addToRecent(place.description);
-    // Just search & push to ParkingList instead of unsupported details page
     router.push(`/map/ParkingDetails?place_id=${place.place_id}`);
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Back Button */}
       <TouchableOpacity
         onPress={() => router.push("/map")}
@@ -85,12 +87,18 @@ export default function SearchPage() {
           onSubmitEditing={handleSearch}
           style={styles.searchInput}
         />
-        <TouchableOpacity style={styles.searchIcon} onPress={handleSearch}>
-          <Ionicons name="search" size={26} color="white" />
+        <TouchableOpacity
+          style={styles.iconBtn}
+          onPress={() => setFilterVisible(true)}
+        >
+          <Ionicons name="filter" size={22} color="white" />
+        </TouchableOpacity>{" "}
+        <TouchableOpacity style={styles.iconBtn} onPress={handleSearch}>
+          <Ionicons name="search" size={22} color="white" />
         </TouchableOpacity>
       </View>
 
-      {/* List Results or Recent */}
+      {/* Results */}
       <FlatList
         data={results.length > 0 ? results : recentSearches}
         keyExtractor={(item, index) =>
@@ -109,7 +117,13 @@ export default function SearchPage() {
         }
         contentContainerStyle={styles.recentList}
       />
-    </View>
+
+      {/* Filter Popup Modal */}
+      <FilterPopup
+        visible={filterVisible}
+        onClose={() => setFilterVisible(false)}
+      />
+    </SafeAreaView>
   );
 }
 
@@ -117,15 +131,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingTop: 60,
   },
   backBtn: {
-    position: "absolute",
-    top: 18,
-    left: 16,
+    marginTop: 8,
+    marginLeft: 16,
     flexDirection: "row",
     alignItems: "center",
-    zIndex: 10,
     paddingVertical: 4,
   },
   backText: {
@@ -140,7 +151,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E9F1FF",
     borderRadius: 24,
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 12,
     height: 44,
     overflow: "hidden",
     paddingRight: 6,
@@ -151,13 +162,14 @@ const styles = StyleSheet.create({
     color: "#000",
     paddingLeft: 16,
   },
-  searchIcon: {
+  iconBtn: {
     backgroundColor: "#84B4FF",
     borderRadius: 24,
-    height: 44,
-    width: 44,
+    height: 36,
+    width: 36,
     justifyContent: "center",
     alignItems: "center",
+    marginLeft: 6,
   },
   recentList: {
     paddingHorizontal: 24,
