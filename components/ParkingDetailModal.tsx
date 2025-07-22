@@ -1,5 +1,3 @@
-// components/ParkingDetailModal.tsx
-
 import React from "react";
 import {
   Image,
@@ -17,6 +15,9 @@ interface Props {
   onMoreDetail: () => void;
   name: string;
   address: string;
+  latitude: number;
+  longitude: number;
+  googleApiKey: string;
   imageUrl: string;
 }
 
@@ -26,8 +27,14 @@ export default function ParkingDetailModal({
   onMoreDetail,
   name,
   address,
-  imageUrl,
+  latitude,
+  longitude,
+  googleApiKey,
 }: Props) {
+  const streetViewImage =
+    latitude && longitude
+      ? `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${latitude},${longitude}&fov=80&heading=0&pitch=10&radius=50&key=${googleApiKey}`
+      : "https://via.placeholder.com/300x200";
   return (
     <Modal visible={visible} transparent animationType="fade">
       <TouchableWithoutFeedback onPress={onClose}>
@@ -37,7 +44,12 @@ export default function ParkingDetailModal({
               <Text style={styles.title}>Details</Text>
               <View style={styles.divider} />
 
-              <Image source={{ uri: imageUrl }} style={styles.image} />
+              {/* ✅ Corrected: Display image properly */}
+              <Image
+                source={{ uri: streetViewImage }}
+                style={styles.image}
+                resizeMode="cover"
+              />
 
               <Text style={styles.name}>{name}</Text>
               <Text style={styles.address}>{address}</Text>

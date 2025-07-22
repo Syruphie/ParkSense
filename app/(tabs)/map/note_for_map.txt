@@ -1,0 +1,14 @@
+https://data.calgary.ca/resource/45az-7kh9.json
+
+https://data.calgary.ca/Help-and-Information/On-Street-Parking-Zones-with-Rates/45az-7kh9/data_preview
+
+
+data that actually needed:
+1. Lot name YES
+2. address YES
+3. parking style (per hour /per day) YES
+4. cost YES
+5. max YES
+6. about KINDA
+7. review (this is diffcult) XXXXX
+8. spot number (A31??) XXXX

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -11,33 +11,48 @@ import {
   View,
 } from "react-native";
 
+const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "";
+if (!apiKey) console.warn("⚠️ GOOGLE_API_KEY is missing!");
+
 export default function ParkingDetails() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-
   const [lot, setLot] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [imageUrl, setImageUrl] = useState(
+    "https://via.placeholder.com/300x200"
+  );
 
   useEffect(() => {
     if (!id) return;
 
     const fetchLot = async () => {
       try {
-        const response = await fetch(
+        const res = await fetch(
           "https://data.calgary.ca/resource/45az-7kh9.json?$limit=1000"
         );
-        const data = await response.json();
+        const data = await res.json();
 
-        const found = data.find((item: any) => {
-          return (
+        const found = data.find(
+          (item: any) =>
             item.globalid_guid === id ||
             `${item.permit_zone}-${item.address_desc}` === id
-          );
-        });
+        );
 
-        setLot(found || null);
+        if (found) {
+          setLot(found);
+
+          const coords = found.the_geom?.coordinates?.[0]?.[0];
+          if (coords?.length === 2 && apiKey) {
+            const [lng, lat] = coords;
+            const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=0&pitch=10&radius=50&key=${apiKey}`;
+            setImageUrl(streetViewUrl);
+          }
+        } else {
+          setLot(null);
+        }
       } catch (err) {
-        console.error("Failed to fetch lot details:", err);
+        console.error("Failed to fetch lot data:", err);
       } finally {
         setLoading(false);
       }
@@ -62,61 +77,59 @@ export default function ParkingDetails() {
     );
   }
 
-  const imageUrl =
-    "https://images.unsplash.com/photo-1616352553120-8632cf961af4";
-
   return (
     <ScrollView style={styles.container}>
-      {/* Header Image */}
       <Image source={{ uri: imageUrl }} style={styles.image} />
 
-      {/* Back Button */}
       <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
         <Ionicons name="chevron-back" size={24} color="black" />
-        <Text style={styles.backText}>Parking Details</Text>
+        <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
 
-      {/* Info Card */}
       <View style={styles.card}>
-        <View style={styles.titleRow}>
-          <View>
-            <Text style={styles.title}>{lot.zone_type ?? "Parking Zone"}</Text>
-            <Text style={styles.subtitle}>{lot.address_desc ?? "Unknown"}</Text>
+        <Text style={styles.name}>{lot.zone_type || "Parking Zone"}</Text>
+        <Text style={styles.address}>
+          {lot.address_desc || "Unknown address"}
+        </Text>
 
-            <View style={styles.infoRow}>
-              <Ionicons name="location" size={16} color="black" />
-              <Text style={styles.detailText}>
-                {lot.price_zone ? `Zone ${lot.price_zone}` : "N/A"}
-              </Text>
-              <Ionicons
-                name="time"
-                size={16}
-                color="black"
-                style={{ marginLeft: 10 }}
-              />
-              <Text style={styles.detailText}>
-                {lot.max_time ? `${lot.max_time} mins` : "N/A"}
-              </Text>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.goBtn}>
-            <Ionicons name="navigate" size={24} color="#fff" />
-          </TouchableOpacity>
+        <View style={styles.metaRow}>
+          <Ionicons name="location" size={16} />
+          <Text style={styles.metaText}>
+            Lat/Lng: {lot.the_geom?.coordinates?.[0]?.[0]?.[1]?.toFixed(5)},{" "}
+            {lot.the_geom?.coordinates?.[0]?.[0]?.[0]?.toFixed(5)}
+          </Text>
         </View>
       </View>
 
-      {/* About Section */}
-      <View style={styles.aboutSection}>
-        <Text style={styles.sectionTitle}>Info</Text>
-        <Text style={styles.aboutText}>
-          {lot.html_zone_rate
-            ? lot.html_zone_rate.replace(/<[^>]+>/g, "\n").trim()
-            : "No rate information available."}
-        </Text>
+      <View style={styles.infoBox}>
+        <Text style={styles.sectionTitle}>Details</Text>
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Parking</Text>
+          <Text style={styles.value}>
+            {lot.rate_period_desc?.toLowerCase().includes("hour")
+              ? "Per Hour"
+              : lot.rate_period_desc?.toLowerCase().includes("day")
+              ? "Per Day"
+              : "N/A"}
+          </Text>
+        </View>
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Cost</Text>
+          <Text style={styles.value}>
+            {lot.rate_amount
+              ? `$${parseFloat(lot.rate_amount).toFixed(2)}`
+              : "N/A"}
+          </Text>
+        </View>
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Max</Text>
+          <Text style={styles.value}>{lot.max_stay_desc || "N/A"}</Text>
+        </View>
       </View>
 
-      {/* Book Now */}
       <TouchableOpacity style={styles.bookBtn}>
         <Text style={styles.bookText}>Book Now</Text>
       </TouchableOpacity>
@@ -146,43 +159,39 @@ const styles = StyleSheet.create({
   },
   backText: { fontWeight: "600", marginLeft: 4 },
   card: {
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#f2f2f2",
     margin: 16,
+    borderRadius: 10,
+    padding: 16,
+  },
+  name: { fontWeight: "bold", fontSize: 18, marginBottom: 4 },
+  address: { color: "#555", fontSize: 14 },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  metaText: { fontSize: 13, marginLeft: 4 },
+  infoBox: {
+    backgroundColor: "#f9f9f9",
+    marginHorizontal: 16,
     borderRadius: 8,
     padding: 16,
   },
-  titleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  title: { fontSize: 18, fontWeight: "bold" },
-  subtitle: { fontSize: 14, color: "#666", marginBottom: 4 },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 2,
-  },
-  detailText: { fontSize: 13, marginLeft: 4 },
-  goBtn: {
-    width: 40,
-    height: 40,
-    backgroundColor: "#84ABFF",
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  aboutSection: { padding: 16 },
   sectionTitle: {
     fontWeight: "bold",
     fontSize: 16,
     marginBottom: 8,
   },
-  aboutText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: "#333",
-    whiteSpace: "pre-wrap",
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+    borderBottomColor: "#ccc",
+    borderBottomWidth: 0.5,
   },
+  label: { fontWeight: "500" },
+  value: { color: "#333" },
   bookBtn: {
     backgroundColor: "#609CFF",
     alignSelf: "center",
@@ -190,10 +199,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 10,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
   bookText: {
     color: "#fff",

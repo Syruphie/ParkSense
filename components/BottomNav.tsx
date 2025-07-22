@@ -3,7 +3,7 @@ import { Link, usePathname } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const tabs = [
-  { name: "/map/map", icon: "map", label: "map" },
+  { name: "/map", icon: "map", label: "map" },
   { name: "/booking", icon: "document-text", label: "booking" },
   { name: "/record", icon: "folder", label: "record" },
 ];

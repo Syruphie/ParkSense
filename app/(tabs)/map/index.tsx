@@ -1,4 +1,3 @@
-// import surfaceData from "@/assets/data/parks_surfaces.json";
 import BottomNav from "@/components/BottomNav";
 import LocationShortcutButton from "@/components/LocationShortcutButton";
 import ParkingDetailModal from "@/components/ParkingDetailModal";
@@ -6,49 +5,29 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import MapView, {
-  MapPressEvent,
-  Marker,
-  PROVIDER_DEFAULT,
-  UrlTile,
-} from "react-native-maps";
+import MapView, { Marker, PROVIDER_DEFAULT, UrlTile } from "react-native-maps";
 
-// const dummyParkingLots = [
-//   {
-//     id: "lot1",
-//     name: "CPA Lot 888",
-//     latitude: 51.0462,
-//     longitude: -114.0631,
-//     imageUrl:
-//       "https://upload.wikimedia.org/wikipedia/commons/e/e1/Calgary-Riverfront.jpg",
-//   },
-//   {
-//     id: "lot2",
-//     name: "Calgary City Centre Lot",
-//     latitude: 51.0453,
-//     longitude: -114.0642,
-//   },
-//   {
-//     id: "lot3",
-//     name: "Lot #26 - Centre Street",
-//     latitude: 51.0458,
-//     longitude: -114.0685,
-//   },
-// ];
+let streetViewUsageCount = 0;
+const MAX_USAGE = 200;
+const getStreetViewImage = (lat, lng, apiKey) => {
+  if (streetViewUsageCount >= MAX_USAGE) return null;
+  streetViewUsageCount++;
+  return `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=90&pitch=10&key=${apiKey}`;
+};
 
 export default function MapPage() {
   const router = useRouter();
-  const [marker, setMarker] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const [parkingLots, setParkingLots] = useState<any[]>([]);
+  const [marker, setMarker] = useState(null);
+  const [parkingLots, setParkingLots] = useState([]);
+  const [selectedLot, setSelectedLot] = useState(null);
 
-  const handleMapPress = (event: MapPressEvent) => {
+  const handleMapPress = (event) => {
     const { coordinate } = event.nativeEvent;
     setMarker(coordinate);
   };
-  const [selectedLot, setSelectedLot] = useState<any>(null);
+
+  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
+  if (!apiKey) console.warn("⚠️ GOOGLE_API_KEY is missing!");
 
   useEffect(() => {
     const fetchParkingZones = async () => {
@@ -69,7 +48,8 @@ export default function MapPage() {
             const line = item.the_geom.coordinates?.[0]?.[0];
             if (!line || line.length !== 2) return null;
 
-            const [lng, lat] = line; // Geo format: [lng, lat]
+            const [lng, lat] = line;
+            const address = item.address_desc || "Unknown";
 
             return {
               id:
@@ -79,11 +59,16 @@ export default function MapPage() {
               name: item.zone_type || "Parking Zone",
               latitude: lat,
               longitude: lng,
-              address: item.address_desc || "Unknown",
-              imageUrl: "https://via.placeholder.com/300x200",
+              address,
+              imageUrl:
+                getStreetViewImage(
+                  lat,
+                  lng,
+                  process.env.EXPO_PUBLIC_GOOGLE_API_KEY
+                ) || "https://via.placeholder.com/300x200",
             };
           })
-          .filter(Boolean); // remove nulls
+          .filter(Boolean);
 
         setParkingLots(parsed);
       } catch (err) {
@@ -132,7 +117,6 @@ export default function MapPage() {
           maximumZ={19}
         />
 
-        {/* User placed marker */}
         {marker && (
           <Marker
             coordinate={marker}
@@ -143,22 +127,9 @@ export default function MapPage() {
           />
         )}
 
-        {/* Dummy parking markers
-        {dummyParkingLots.map((lot) => (
-          <Marker
-            key={lot.id}
-            coordinate={{ latitude: lot.latitude, longitude: lot.longitude }}
-            onPress={() => setSelectedLot(lot)}
-          >
-            <View style={styles.parkingMarker}>
-              <Text style={styles.parkingText}>P</Text>
-            </View>
-          </Marker>
-        ))} */}
         {renderedMarkers}
       </MapView>
 
-      {/* Search Button */}
       <TouchableOpacity
         style={styles.searchButton}
         onPress={() => router.push("/map/Search")}
@@ -166,26 +137,36 @@ export default function MapPage() {
         <Ionicons name="search" size={24} color="white" />
       </TouchableOpacity>
 
-      {/* Shortcut buttons */}
       <View style={styles.shortcutsRow}>
         <LocationShortcutButton label="Home" onPress={() => {}} />
         <LocationShortcutButton label="Office" onPress={() => {}} />
         <LocationShortcutButton label="Recent Visit" onPress={() => {}} />
       </View>
 
+      <TouchableOpacity
+        style={styles.listButton}
+        onPress={() => router.push("/map/ParkingList")}
+      >
+        <Ionicons name="list" size={20} color="white" />
+        <Text style={styles.listButtonText}>Parking List</Text>
+      </TouchableOpacity>
+
       <BottomNav />
 
       <ParkingDetailModal
         visible={!!selectedLot}
-        name={selectedLot?.name}
-        address={selectedLot?.address ?? "No address"}
+        name={selectedLot?.name || "Unknown"}
+        address={selectedLot?.address || "No address"}
+        latitude={selectedLot?.latitude || 0}
+        longitude={selectedLot?.longitude || 0}
         imageUrl={
-          selectedLot?.imageUrl ?? "https://via.placeholder.com/300x200"
+          selectedLot?.imageUrl || "https://via.placeholder.com/300x200"
         }
+        googleApiKey={apiKey || ""}
         onClose={() => setSelectedLot(null)}
         onMoreDetail={() => {
           setSelectedLot(null);
-          router.push(`/map/ParkingDetails?id=${selectedLot.id}`);
+          router.push(`/map/ParkingDetails?id=${selectedLot?.id}`);
         }}
       />
     </View>
@@ -224,17 +205,33 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#84B4FF", // match your UI blue
+    backgroundColor: "#84B4FF",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#fff", // optional border
+    borderColor: "#fff",
   },
-
   parkingText: {
     color: "#000",
     fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",
+  },
+  listButton: {
+    position: "absolute",
+    top: 100,
+    left: 20,
+    backgroundColor: "#4B70FF",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    zIndex: 10,
+  },
+  listButtonText: {
+    color: "white",
+    marginLeft: 6,
+    fontWeight: "600",
   },
 });
