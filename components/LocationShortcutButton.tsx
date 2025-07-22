@@ -1,44 +1,40 @@
+// LocationShortcutButton.tsx
+
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, TouchableOpacity, ViewStyle } from "react-native";
+import { StyleSheet, Text, TouchableOpacity } from "react-native";
 
-type Props = {
-  label: string;
-  onPress: () => void;
-  style?: ViewStyle; // allow optional override
-};
-
-export default function LocationShortcutButton({
-  label,
-  onPress,
-  style,
-}: Props) {
+export default function LocationShortcutButton({ label, onPress }) {
   return (
-    <TouchableOpacity style={[styles.button, style]} onPress={onPress}>
-      <Ionicons name="location-outline" size={16} color="white" />
-      <Text style={styles.text}>{label}</Text>
+    <TouchableOpacity style={styles.button} onPress={onPress}>
+      <Ionicons name="location" size={20} color="white" />
+      <Text style={styles.label}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
+    backgroundColor: "#84B4FF",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    marginHorizontal: 8,
+    marginVertical: 6,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#84B4FF",
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    flex: 1,
-    minWidth: "30%",
-    maxWidth: "48%",
-    margin: 4, // <-- adds spacing between buttons
-    borderWidth: 1,
-    borderColor: "#000", // white border
-    zIndex: 1, // ensure it's above map
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  text: {
-    color: "#fff",
-    marginLeft: 6,
-    fontSize: 15,
+  label: {
+    color: "white",
+    marginLeft: 8,
+    fontWeight: "600",
+    fontSize: 14,
   },
 });

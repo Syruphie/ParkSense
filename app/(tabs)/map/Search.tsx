@@ -1,6 +1,3 @@
-"use client";
-
-import FilterPopup from "@/components/FilterPopup"; // make sure this is correctly imported
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -13,64 +10,105 @@ import {
   View,
 } from "react-native";
 
-const recentSearches = [
-  "CPA lot 888",
-  "116 2 Ave SW parking",
-  "202 centre st SE parking",
-  "201 centre street sw -lot #253",
-  "221 centre st s parking",
-  "CPA lot 26",
-];
+const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
 export default function SearchPage() {
   const router = useRouter();
-  const [showFilter, setShowFilter] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [recentSearches, setRecentSearches] = useState([
+    "CPA lot 888",
+    "116 2 Ave SW parking",
+    "202 centre st SE parking",
+    "201 centre street sw -lot #253",
+    "221 centre st s parking",
+    "CPA lot 26",
+  ]);
+
+  const addToRecent = (searchTerm: string) => {
+    setRecentSearches((prev) => {
+      const updated = [
+        searchTerm,
+        ...prev.filter((item) => item !== searchTerm),
+      ];
+      return updated.slice(0, 10);
+    });
+  };
+
+  const handleSearch = async () => {
+    if (!query.trim()) return;
+
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+          query
+        )}&key=${GOOGLE_API_KEY}&components=country:ca`
+      );
+
+      const data = await response.json();
+
+      if (data.status === "OK") {
+        setResults(data.predictions);
+      } else {
+        console.warn("Google API error:", data.status);
+        setResults([]);
+      }
+    } catch (err) {
+      console.error("Search failed:", err);
+    }
+  };
+
+  const handleSelectResult = (place) => {
+    addToRecent(place.description);
+    // Just search & push to ParkingList instead of unsupported details page
+    router.push(`/map/ParkingDetails?place_id=${place.place_id}`);
+  };
 
   return (
     <View style={styles.container}>
-      {/* Top Bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          onPress={() => router.push("/map/map")}
-          style={styles.backBtn}
-        >
-          <Ionicons name="chevron-back" size={22} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.pageTitle}>Search</Text>
-      </View>
+      {/* Back Button */}
+      <TouchableOpacity
+        onPress={() => router.push("/map")}
+        style={styles.backBtn}
+      >
+        <Ionicons name="chevron-back" size={22} color="#333" />
+        <Text style={styles.backText}>Search</Text>
+      </TouchableOpacity>
 
       {/* Search Bar */}
       <View style={styles.searchBar}>
         <TextInput
           placeholder="Search location..."
           placeholderTextColor="#666"
+          value={query}
+          onChangeText={setQuery}
+          onSubmitEditing={handleSearch}
           style={styles.searchInput}
         />
-        <View style={styles.iconGroup}>
-          <TouchableOpacity
-            style={styles.filterIcon}
-            onPress={() => setShowFilter(true)}
-          >
-            <Ionicons name="funnel-outline" size={20} color="black" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.searchIcon}>
-            <Ionicons name="search" size={30} color="black" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.searchIcon} onPress={handleSearch}>
+          <Ionicons name="search" size={26} color="white" />
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.divider} />
-
-      {/* Recent Searches */}
-      <Text style={styles.recentTitle}>Recent</Text>
+      {/* List Results or Recent */}
       <FlatList
-        data={recentSearches}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => <Text style={styles.recentItem}>{item}</Text>}
+        data={results.length > 0 ? results : recentSearches}
+        keyExtractor={(item, index) =>
+          typeof item === "string" ? index.toString() : item.place_id
+        }
+        renderItem={({ item }) =>
+          typeof item === "string" ? (
+            <TouchableOpacity onPress={() => setQuery(item)}>
+              <Text style={styles.recentItem}>{item}</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={() => handleSelectResult(item)}>
+              <Text style={styles.recentItem}>{item.description}</Text>
+            </TouchableOpacity>
+          )
+        }
         contentContainerStyle={styles.recentList}
       />
-
-      <FilterPopup visible={showFilter} onClose={() => setShowFilter(false)} />
     </View>
   );
 }
@@ -79,20 +117,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingTop: 50,
-  },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingTop: 60,
   },
   backBtn: {
-    paddingRight: 8,
+    position: "absolute",
+    top: 18,
+    left: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    zIndex: 10,
+    paddingVertical: 4,
   },
-  pageTitle: {
-    fontSize: 18,
+  backText: {
+    fontSize: 16,
     fontWeight: "600",
+    marginLeft: 4,
+    color: "#333",
   },
   searchBar: {
     flexDirection: "row",
@@ -100,26 +140,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#E9F1FF",
     borderRadius: 24,
     marginHorizontal: 16,
+    marginTop: 16,
     height: 44,
     overflow: "hidden",
+    paddingRight: 6,
   },
-
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: "#000",
     paddingLeft: 16,
-  },
-
-  iconGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingRight: 0, // add padding here instead
-    paddingLeft: 34,
-  },
-  filterIcon: {
-    padding: 6,
-    marginRight: 6,
   },
   searchIcon: {
     backgroundColor: "#84B4FF",
@@ -129,24 +159,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  divider: {
-    height: 1,
-    backgroundColor: "#ddd",
-    marginVertical: 16,
-    marginHorizontal: 16,
-  },
-  recentTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginHorizontal: 16,
-    marginBottom: 8,
-  },
   recentList: {
-    paddingHorizontal: 24, // shifted right from 16 to 24
+    paddingHorizontal: 24,
+    marginTop: 20,
   },
   recentItem: {
     fontSize: 15,
-    color: "#666",
+    color: "#333",
     marginBottom: 12,
+    borderBottomWidth: 0.5,
+    borderColor: "#ccc",
+    paddingBottom: 6,
   },
 });

@@ -1,10 +1,16 @@
-import BottomNav from "@/components/BottomNav";
 import LocationShortcutButton from "@/components/LocationShortcutButton";
 import ParkingDetailModal from "@/components/ParkingDetailModal";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import MapView, { Marker, PROVIDER_DEFAULT, UrlTile } from "react-native-maps";
 
 let streetViewUsageCount = 0;
@@ -98,7 +104,9 @@ export default function MapPage() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#CCDBFD" />
+
       <MapView
         key={parkingLots.length > 0 ? "loaded" : "loading"}
         style={styles.map}
@@ -151,8 +159,6 @@ export default function MapPage() {
         <Text style={styles.listButtonText}>Parking List</Text>
       </TouchableOpacity>
 
-      <BottomNav />
-
       <ParkingDetailModal
         visible={!!selectedLot}
         name={selectedLot?.name || "Unknown"}
@@ -169,13 +175,14 @@ export default function MapPage() {
           router.push(`/map/ParkingDetails?id=${selectedLot?.id}`);
         }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#CCDBFD",
     position: "relative",
   },
   map: {
@@ -193,13 +200,14 @@ const styles = StyleSheet.create({
   },
   shortcutsRow: {
     position: "absolute",
-    bottom: 80,
+    bottom: 10,
     left: 0,
     right: 0,
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
     zIndex: 11,
+    shadowColor: "#000",
   },
   parkingMarker: {
     width: 32,

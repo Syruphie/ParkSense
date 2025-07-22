@@ -1,3 +1,5 @@
+"use client";
+
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -12,11 +14,11 @@ import {
 } from "react-native";
 
 const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "";
-if (!apiKey) console.warn("⚠️ GOOGLE_API_KEY is missing!");
+if (!apiKey) console.warn("\u26A0\uFE0F GOOGLE_API_KEY is missing!");
 
 export default function ParkingDetails() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, place_id } = useLocalSearchParams();
   const [lot, setLot] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [imageUrl, setImageUrl] = useState(
@@ -24,9 +26,41 @@ export default function ParkingDetails() {
   );
 
   useEffect(() => {
-    if (!id) return;
+    const fetchFromGooglePlace = async () => {
+      try {
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&key=${apiKey}`
+        );
+        const json = await res.json();
+        const result = json.result;
 
-    const fetchLot = async () => {
+        if (result) {
+          const lat = result.geometry.location.lat;
+          const lng = result.geometry.location.lng;
+          const address = result.formatted_address;
+
+          setLot({
+            address_desc: address,
+            zone_type: result.types?.[0] || "Point of Interest",
+            rate_amount: null,
+            rate_period_desc: "",
+            max_stay_desc: "",
+            the_geom: {
+              coordinates: [[[{ 1: lat, 0: lng }]]],
+            },
+          });
+
+          const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=0&pitch=10&radius=50&key=${apiKey}`;
+          setImageUrl(streetViewUrl);
+        }
+      } catch (err) {
+        console.error("Google Place Details error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchCalgaryParking = async () => {
       try {
         const res = await fetch(
           "https://data.calgary.ca/resource/45az-7kh9.json?$limit=1000"
@@ -52,14 +86,20 @@ export default function ParkingDetails() {
           setLot(null);
         }
       } catch (err) {
-        console.error("Failed to fetch lot data:", err);
+        console.error("Calgary Parking Fetch error:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchLot();
-  }, [id]);
+    if (place_id) {
+      fetchFromGooglePlace();
+    } else if (id) {
+      fetchCalgaryParking();
+    } else {
+      setLoading(false);
+    }
+  }, [id, place_id]);
 
   if (loading) {
     return (
@@ -95,8 +135,14 @@ export default function ParkingDetails() {
         <View style={styles.metaRow}>
           <Ionicons name="location" size={16} />
           <Text style={styles.metaText}>
-            Lat/Lng: {lot.the_geom?.coordinates?.[0]?.[0]?.[1]?.toFixed(5)},{" "}
-            {lot.the_geom?.coordinates?.[0]?.[0]?.[0]?.toFixed(5)}
+            {lot.the_geom?.coordinates?.[0]?.[0]?.length === 2 ? (
+              <Text style={styles.metaText}>
+                Lat/Lng: {lot.the_geom.coordinates[0][0][1].toFixed(5)},{" "}
+                {lot.the_geom.coordinates[0][0][0].toFixed(5)}
+              </Text>
+            ) : (
+              <Text style={styles.metaText}>Coordinates not available</Text>
+            )}
           </Text>
         </View>
       </View>

@@ -1,4 +1,3 @@
-import BottomNav from "@/components/BottomNav";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import React, { useState } from "react";
 import {
@@ -180,7 +179,7 @@ export default function BookingPage() {
         </TouchableOpacity>
       </View>
 
-      <BottomNav />
+      {/* <BottomNav /> */}
     </View>
   );
 }

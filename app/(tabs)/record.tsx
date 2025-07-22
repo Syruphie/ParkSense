@@ -1,4 +1,3 @@
-import BottomNav from "@/components/BottomNav";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function BookingPage() {
@@ -9,7 +8,7 @@ export default function BookingPage() {
         {/* Add more content here */}
       </View>
 
-      <BottomNav />
+      {/* <BottomNav /> */}
     </View>
   );
 }
