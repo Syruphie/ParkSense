@@ -149,11 +149,7 @@ export default function LoginScreen() {
               style={styles.logo}
               resizeMode="contain"
             />
-            <View style={styles.carsContainer}>
-              <View style={[styles.car, styles.car1]} />
-              <View style={[styles.car, styles.car2]} />
-              <View style={[styles.car, styles.car3]} />
-            </View>
+
           </View>
 
           {/* Login/Sign Up Form */}
@@ -310,38 +306,15 @@ const styles = StyleSheet.create({
     minHeight: 200,
   },
   logo: {
-    width: 200,
-    height: 80,
+    width: 600,
+    height: 250,
     marginBottom: 20,
   },
   carsContainer: {
     position: 'relative',
     width: 200,
     height: 150,
-  },
-  car: {
-    width: 80,
-    height: 40,
-    borderRadius: 20,
-    position: 'absolute',
-  },
-  car1: {
-    backgroundColor: '#6B46C1',
-    top: 20,
-    left: 60,
-    transform: [{ rotate: '-10deg' }],
-  },
-  car2: {
-    backgroundColor: '#7C3AED',
-    top: 60,
-    left: 20,
-    transform: [{ rotate: '15deg' }],
-  },
-  car3: {
-    backgroundColor: '#8B5CF6',
-    top: 100,
-    left: 100,
-    transform: [{ rotate: '-5deg' }],
+
   },
   formContainer: {
     paddingHorizontal: 30,
