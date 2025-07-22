@@ -1,5 +1,6 @@
 "use client";
 
+import ParkingDetailCard from "@/components/detailpage/ParkingDetailCard";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -15,7 +16,7 @@ import {
 } from "react-native";
 
 const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "";
-if (!apiKey) console.warn("⚠️ GOOGLE_API_KEY is missing!");
+if (!apiKey) console.warn("\u26A0\uFE0F GOOGLE_API_KEY is missing!");
 
 function haversineDistance(lat1, lon1, lat2, lon2) {
   const toRad = (x) => (x * Math.PI) / 180;
@@ -32,69 +33,15 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 export default function ParkingDetails() {
   const router = useRouter();
   const { id, place_id } = useLocalSearchParams();
-  const [lot, setLot] = useState<any>(null);
-  const [distanceKm, setDistanceKm] = useState<string | null>(null);
-  const [durationText, setDurationText] = useState<string | null>(null);
+  const [lot, setLot] = useState(null);
+  const [distanceKm, setDistanceKm] = useState(null);
+  const [durationText, setDurationText] = useState(null);
   const [loading, setLoading] = useState(true);
   const [imageUrl, setImageUrl] = useState(
     "https://via.placeholder.com/300x200"
   );
 
   useEffect(() => {
-    const fetchFromGooglePlace = async () => {
-      try {
-        const res = await fetch(
-          `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&key=${apiKey}`
-        );
-        const json = await res.json();
-        const result = json.result;
-
-        if (result) {
-          const lat = result.geometry.location.lat;
-          const lng = result.geometry.location.lng;
-          const address = result.formatted_address;
-
-          setLot({
-            address_desc: address,
-            zone_type: result.types?.[0] || "Point of Interest",
-            rate_amount: null,
-            rate_period_desc: "",
-            max_stay_desc: "",
-            the_geom: {
-              coordinates: [[[{ 1: lat, 0: lng }]]],
-            },
-          });
-
-          const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=0&pitch=10&radius=50&key=${apiKey}`;
-          setImageUrl(streetViewUrl);
-
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status === "granted") {
-            const userLocation = await Location.getCurrentPositionAsync({});
-            const distance = haversineDistance(
-              userLocation.coords.latitude,
-              userLocation.coords.longitude,
-              lat,
-              lng
-            );
-            setDistanceKm(distance.toFixed(2));
-
-            const driveTime = await fetchDrivingTime(
-              userLocation.coords.latitude,
-              userLocation.coords.longitude,
-              lat,
-              lng
-            );
-            setDurationText(driveTime);
-          }
-        }
-      } catch (err) {
-        console.error("Google Place Details error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     const fetchDrivingTime = async (fromLat, fromLng, toLat, toLng) => {
       try {
         const res = await fetch(
@@ -108,6 +55,77 @@ export default function ParkingDetails() {
       }
     };
 
+    const fetchFromGooglePlace = async () => {
+      try {
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&fields=editorial_summary,geometry,formatted_address,types,name&key=${apiKey}`
+        );
+        const json = await res.json();
+        const result = json.result;
+
+        if (!result) return setLoading(false);
+
+        const lat = result.geometry.location.lat;
+        const lng = result.geometry.location.lng;
+        const address = result.formatted_address;
+
+        const parkingRes = await fetch(
+          "https://data.calgary.ca/resource/45az-7kh9.json?$limit=1000"
+        );
+        const parkingData = await parkingRes.json();
+
+        const matched = parkingData.find((p) => {
+          const coords = p.the_geom?.coordinates?.[0]?.[0];
+          if (!Array.isArray(coords) || coords.length !== 2) return false;
+          const [plng, plat] = coords;
+          const dist = haversineDistance(lat, lng, plat, plng);
+          return dist < 0.2;
+        });
+
+        if (matched) {
+          console.log("Matched record:", matched);
+        } else {
+          console.warn("No matching Calgary parking zone found within 200m");
+        }
+
+        setLot({
+          address_desc: address,
+          zone_type: result.types?.[0] || "Point of Interest",
+          editorial_summary: result.editorial_summary,
+          rate_amount: matched?.rate_amount || null,
+          rate_period_desc: matched?.rate_period_desc || null,
+          max_stay_desc: matched?.max_stay_desc || null,
+        });
+
+        const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=0&pitch=10&radius=50&key=${apiKey}`;
+        setImageUrl(streetViewUrl);
+
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const userLocation = await Location.getCurrentPositionAsync({});
+          const distance = haversineDistance(
+            userLocation.coords.latitude,
+            userLocation.coords.longitude,
+            lat,
+            lng
+          );
+          setDistanceKm(distance.toFixed(2));
+
+          const driveTime = await fetchDrivingTime(
+            userLocation.coords.latitude,
+            userLocation.coords.longitude,
+            lat,
+            lng
+          );
+          setDurationText(driveTime);
+        }
+      } catch (err) {
+        console.error("Google Place + Calgary merge error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const fetchCalgaryParking = async () => {
       try {
         const res = await fetch(
@@ -116,7 +134,7 @@ export default function ParkingDetails() {
         const data = await res.json();
 
         const found = data.find(
-          (item: any) =>
+          (item) =>
             item.globalid_guid === id ||
             `${item.permit_zone}-${item.address_desc}` === id
         );
@@ -124,7 +142,7 @@ export default function ParkingDetails() {
         if (found) {
           setLot(found);
           const coords = found.the_geom?.coordinates?.[0]?.[0];
-          if (coords?.length === 2 && apiKey) {
+          if (Array.isArray(coords) && coords.length === 2) {
             const [lng, lat] = coords;
             const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=0&pitch=10&radius=50&key=${apiKey}`;
             setImageUrl(streetViewUrl);
@@ -160,13 +178,9 @@ export default function ParkingDetails() {
       }
     };
 
-    if (place_id) {
-      fetchFromGooglePlace();
-    } else if (id) {
-      fetchCalgaryParking();
-    } else {
-      setLoading(false);
-    }
+    if (place_id) fetchFromGooglePlace();
+    else if (id) fetchCalgaryParking();
+    else setLoading(false);
   }, [id, place_id]);
 
   if (loading) {
@@ -188,7 +202,6 @@ export default function ParkingDetails() {
   return (
     <ScrollView style={styles.container}>
       <Image source={{ uri: imageUrl }} style={styles.image} />
-
       <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
         <Ionicons name="chevron-back" size={24} color="black" />
         <Text style={styles.backText}>Back</Text>
@@ -199,13 +212,11 @@ export default function ParkingDetails() {
         <Text style={styles.address}>
           {lot.address_desc || "Unknown address"}
         </Text>
-
         <View style={styles.metaRow}>
           <Ionicons name="location" size={16} />
           <Text style={styles.metaText}>
             {distanceKm ? `${distanceKm} km` : "Distance not available"}
           </Text>
-
           <Ionicons name="car" size={16} style={{ marginLeft: 16 }} />
           <Text style={styles.metaText}>
             {durationText || "Drive time not available"}
@@ -213,34 +224,14 @@ export default function ParkingDetails() {
         </View>
       </View>
 
-      <View style={styles.infoBox}>
-        <Text style={styles.sectionTitle}>Details</Text>
+      <ParkingDetailCard lot={lot} />
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Parking</Text>
-          <Text style={styles.value}>
-            {lot.rate_period_desc?.toLowerCase().includes("hour")
-              ? "Per Hour"
-              : lot.rate_period_desc?.toLowerCase().includes("day")
-              ? "Per Day"
-              : "N/A"}
-          </Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Cost</Text>
-          <Text style={styles.value}>
-            {lot.rate_amount
-              ? `$${parseFloat(lot.rate_amount).toFixed(2)}`
-              : "N/A"}
-          </Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Max</Text>
-          <Text style={styles.value}>{lot.max_stay_desc || "N/A"}</Text>
-        </View>
-      </View>
+      {/* <PlaceAbout
+        overview={
+          lot?.editorial_summary?.overview ??
+          "No description from Google database available for this place."
+        }
+      /> */}
 
       <TouchableOpacity style={styles.bookBtn}>
         <Text style={styles.bookText}>Book Now</Text>
