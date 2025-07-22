@@ -32,7 +32,7 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 
 export default function ParkingDetails() {
   const router = useRouter();
-  const { id, place_id } = useLocalSearchParams();
+  const { id, place_id, lat, lng } = useLocalSearchParams();
   const [lot, setLot] = useState(null);
   const [distanceKm, setDistanceKm] = useState(null);
   const [durationText, setDurationText] = useState(null);
@@ -41,20 +41,76 @@ export default function ParkingDetails() {
     "https://via.placeholder.com/300x200"
   );
 
-  useEffect(() => {
-    const fetchDrivingTime = async (fromLat, fromLng, toLat, toLng) => {
-      try {
-        const res = await fetch(
-          `https://maps.googleapis.com/maps/api/directions/json?origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&mode=driving&key=${apiKey}`
-        );
-        const json = await res.json();
-        return json.routes?.[0]?.legs?.[0]?.duration?.text || null;
-      } catch (error) {
-        console.warn("Error fetching drive time:", error);
-        return null;
-      }
-    };
+  const fetchFromCoords = async (lat, lng) => {
+    try {
+      const parkingRes = await fetch(
+        "https://data.calgary.ca/resource/45az-7kh9.json?$limit=1000"
+      );
+      const parkingData = await parkingRes.json();
 
+      const matched = parkingData.find((p) => {
+        const coords = p.the_geom?.coordinates?.[0]?.[0];
+        if (!Array.isArray(coords) || coords.length !== 2) return false;
+        const [plng, plat] = coords;
+        const dist = haversineDistance(lat, lng, plat, plng);
+        return dist < 0.2;
+      });
+
+      if (matched) {
+        console.log("Matched record by lat/lng:", matched);
+      } else {
+        console.warn("No matching parking zone within 200m (lat/lng fallback)");
+      }
+
+      setLot({
+        ...matched,
+        address_desc: matched?.address_desc || "Unknown",
+        zone_type: "Parking Zone",
+        editorial_summary: null,
+      });
+      const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=0&pitch=10&radius=50&key=${apiKey}`;
+      setImageUrl(streetViewUrl);
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        const userLocation = await Location.getCurrentPositionAsync({});
+        const distance = haversineDistance(
+          userLocation.coords.latitude,
+          userLocation.coords.longitude,
+          lat,
+          lng
+        );
+        setDistanceKm(distance.toFixed(2));
+
+        const driveTime = await fetchDrivingTime(
+          userLocation.coords.latitude,
+          userLocation.coords.longitude,
+          lat,
+          lng
+        );
+        setDurationText(driveTime);
+      }
+    } catch (err) {
+      console.error("Error in fetchFromCoords:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDrivingTime = async (fromLat, fromLng, toLat, toLng) => {
+    try {
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/directions/json?origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&mode=driving&key=${apiKey}`
+      );
+      const json = await res.json();
+      return json.routes?.[0]?.legs?.[0]?.duration?.text || null;
+    } catch (error) {
+      console.warn("Error fetching drive time:", error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
     const fetchFromGooglePlace = async () => {
       try {
         const res = await fetch(
@@ -180,6 +236,7 @@ export default function ParkingDetails() {
 
     if (place_id) fetchFromGooglePlace();
     else if (id) fetchCalgaryParking();
+    else if (lat && lng) fetchFromCoords(parseFloat(lat), parseFloat(lng));
     else setLoading(false);
   }, [id, place_id]);
 

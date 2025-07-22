@@ -32,6 +32,16 @@ export default function SearchPage() {
     "CPA lot 26",
   ]);
 
+  const geocodeByAddress = async (address) => {
+    const res = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        address
+      )}&key=${GOOGLE_API_KEY}`
+    );
+    const json = await res.json();
+    return json.results?.[0] || null;
+  };
+
   const addToRecent = (searchTerm: string) => {
     setRecentSearches((prev) => {
       const updated = [
@@ -65,9 +75,24 @@ export default function SearchPage() {
     }
   };
 
-  const handleSelectResult = (place) => {
+  const handleSelectResult = async (place) => {
     addToRecent(place.description);
-    router.push(`/map/ParkingDetails?place_id=${place.place_id}`);
+
+    // Step 1: Try to get coordinates from address
+    const geo = await geocodeByAddress(place.description);
+    if (!geo) {
+      console.warn("Could not geocode address");
+      return;
+    }
+
+    const { lat, lng } = geo.geometry.location;
+
+    // Option A: Pass coordinates as query params
+    router.push(
+      `/map/ParkingDetails?lat=${lat}&lng=${lng}&address=${encodeURIComponent(
+        place.description
+      )}`
+    );
   };
 
   return (
@@ -101,12 +126,12 @@ export default function SearchPage() {
               onSubmitEditing={handleSearch}
               style={styles.searchInput}
             />
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.iconBtn}
               onPress={() => setFilterVisible(true)}
             >
               <Ionicons name="filter" size={22} color="white" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TouchableOpacity style={styles.iconBtn} onPress={handleSearch}>
               <Ionicons name="search" size={22} color="white" />
             </TouchableOpacity>
