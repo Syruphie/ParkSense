@@ -49,7 +49,7 @@ export default function HeaderUserIcon() {
                 console.log(
                   `Logout successful. Redirecting ${userFirstName} to login...`
                 );
-                router.replace("/(auth)/login");
+                router.replace("/login");
               }
             },
           },
