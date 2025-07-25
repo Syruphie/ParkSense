@@ -59,51 +59,45 @@ export default function LoginScreen() {
 
   const handleSignUp = async () => {
     if (!email || !password || !firstName || !lastName) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert("Missing fields", "Please fill in all fields.");
       return;
     }
 
     setLoading(true);
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          },
+        },
       });
 
-      if (authError) {
-        Alert.alert("Sign Up Error", authError.message);
+      if (error) {
+        Alert.alert("Sign-up failed", error.message);
         return;
       }
 
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from("user_details")
-          .insert([
-            {
-              uuid: authData.user.id,
-              FirstName: firstName,
-              LastName: lastName,
-              Email: email,
-            },
-          ]);
-
-        if (profileError) {
-          Alert.alert(
-            "Profile Error",
-            "Account created but profile setup failed. Please contact support."
-          );
-          console.error("Profile creation error:", profileError);
-        } else {
-          Alert.alert(
-            "Success",
-            "Account created successfully! Please check your email to verify your account.",
-            [{ text: "OK", onPress: () => setIsSignUp(false) }]
-          );
-        }
-      }
-    } catch (error) {
-      Alert.alert("Error", "An unexpected error occurred");
-      console.error("Sign up error:", error);
+      Alert.alert(
+        "Success",
+        "Account created! Please confirm your email before logging in.",
+        [
+          {
+            text: "OK",
+            onPress: () => setIsSignUp(false),
+          },
+        ],
+        { cancelable: true }
+      );
+    } catch (err) {
+      Alert.alert(
+        "Unexpected Error",
+        "Something went wrong. Please try again."
+      );
+      console.error("Sign up error:", err);
     } finally {
       setLoading(false);
     }
