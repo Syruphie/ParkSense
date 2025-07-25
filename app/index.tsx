@@ -1,4 +1,4 @@
-// app/components/LoginScreen.tsx - Clean Version
+// app/components/LoginScreen.tsx - Updated with DB insert on SignUp
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -20,7 +20,6 @@ import {
 import { supabase } from "../lib/supabase";
 
 export default function LoginScreen() {
-  // ALL hooks declared at the top level - never conditional
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -39,16 +38,55 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
+        email,
+        password,
       });
 
       if (error) {
         Alert.alert("Login Error", error.message);
-      } else {
-        router.replace("/(tabs)");
-        console.log("User logged in:", data.user);
+        return;
       }
+
+      const user = data.user;
+      console.log("User logged in:", user);
+
+      const isFirstNameMissing = !user.user_metadata?.first_name;
+      const isLastNameMissing = !user.user_metadata?.last_name;
+
+      if (isFirstNameMissing || isLastNameMissing) {
+        const { data: profile, error: profileError } = await supabase
+          .from("user_details")
+          .select("FirstName, LastName")
+          .eq("uuid", user.id)
+          .single();
+
+        if (profileError) {
+          console.warn("Could not fetch user profile:", profileError.message);
+        } else {
+          const updatedFirstName = profile.FirstName;
+          const updatedLastName = profile.LastName;
+
+          if (updatedFirstName || updatedLastName) {
+            const { error: updateError } = await supabase.auth.updateUser({
+              data: {
+                ...(updatedFirstName && { first_name: updatedFirstName }),
+                ...(updatedLastName && { last_name: updatedLastName }),
+              },
+            });
+
+            if (updateError) {
+              console.warn(
+                "Failed to update user metadata:",
+                updateError.message
+              );
+            } else {
+              console.log("User metadata updated successfully");
+            }
+          }
+        }
+      }
+
+      router.replace("/(tabs)");
     } catch (error) {
       Alert.alert("Error", "An unexpected error occurred");
       console.error("Login error:", error);
@@ -79,6 +117,24 @@ export default function LoginScreen() {
       if (error) {
         Alert.alert("Sign-up failed", error.message);
         return;
+      }
+
+      if (data?.user) {
+        const { id } = data.user;
+
+        const { error: insertError } = await supabase
+          .from("user_details")
+          .insert({
+            uuid: id,
+            FirstName: firstName,
+            LastName: lastName,
+          });
+
+        if (insertError) {
+          console.warn("Failed to insert user details:", insertError.message);
+        } else {
+          console.log("User details inserted to user_details table");
+        }
       }
 
       Alert.alert(
@@ -126,6 +182,7 @@ export default function LoginScreen() {
     }
   };
 
+  // ... UI remains unchanged
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#CCDBFD" />
