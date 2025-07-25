@@ -1,7 +1,7 @@
 // app/components/LoginScreen.tsx - Clean Version
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,15 +16,15 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { supabase } from '../lib/supabase';
+} from "react-native";
+import { supabase } from "../lib/supabase";
 
 export default function LoginScreen() {
   // ALL hooks declared at the top level - never conditional
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -32,7 +32,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
@@ -44,14 +44,14 @@ export default function LoginScreen() {
       });
 
       if (error) {
-        Alert.alert('Login Error', error.message);
+        Alert.alert("Login Error", error.message);
       } else {
-        router.replace('/(tabs)');
-        console.log('User logged in:', data.user);
+        router.replace("/(tabs)");
+        console.log("User logged in:", data.user);
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
-      console.error('Login error:', error);
+      Alert.alert("Error", "An unexpected error occurred");
+      console.error("Login error:", error);
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ export default function LoginScreen() {
 
   const handleSignUp = async () => {
     if (!email || !password || !firstName || !lastName) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
@@ -71,36 +71,39 @@ export default function LoginScreen() {
       });
 
       if (authError) {
-        Alert.alert('Sign Up Error', authError.message);
+        Alert.alert("Sign Up Error", authError.message);
         return;
       }
 
       if (authData.user) {
         const { error: profileError } = await supabase
-          .from('user_details')
+          .from("user_details")
           .insert([
             {
               uuid: authData.user.id,
               FirstName: firstName,
               LastName: lastName,
               Email: email,
-            }
+            },
           ]);
 
         if (profileError) {
-          Alert.alert('Profile Error', 'Account created but profile setup failed. Please contact support.');
-          console.error('Profile creation error:', profileError);
+          Alert.alert(
+            "Profile Error",
+            "Account created but profile setup failed. Please contact support."
+          );
+          console.error("Profile creation error:", profileError);
         } else {
           Alert.alert(
-            'Success', 
-            'Account created successfully! Please check your email to verify your account.',
-            [{ text: 'OK', onPress: () => setIsSignUp(false) }]
+            "Success",
+            "Account created successfully! Please check your email to verify your account.",
+            [{ text: "OK", onPress: () => setIsSignUp(false) }]
           );
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
-      console.error('Sign up error:', error);
+      Alert.alert("Error", "An unexpected error occurred");
+      console.error("Sign up error:", error);
     } finally {
       setLoading(false);
     }
@@ -108,22 +111,22 @@ export default function LoginScreen() {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      Alert.alert('Email Required', 'Please enter your email address first');
+      Alert.alert("Email Required", "Please enter your email address first");
       return;
     }
 
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email);
-      
+
       if (error) {
-        Alert.alert('Reset Password Error', error.message);
+        Alert.alert("Reset Password Error", error.message);
       } else {
-        Alert.alert('Success', 'Password reset email sent! Check your inbox.');
+        Alert.alert("Success", "Password reset email sent! Check your inbox.");
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to send reset email');
-      console.error('Password reset error:', error);
+      Alert.alert("Error", "Failed to send reset email");
+      console.error("Password reset error:", error);
     } finally {
       setLoading(false);
     }
@@ -132,24 +135,23 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#CCDBFD" />
-      
-      <KeyboardAvoidingView 
+
+      <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
           {/* Header Section */}
           <View style={styles.header}>
-            <Image 
-              source={require('../assets/images/ParkSense-Logo.png')}
+            <Image
+              source={require("../assets/images/ParkSense-Logo.png")}
               style={styles.logo}
               resizeMode="contain"
             />
-
           </View>
 
           {/* Login/Sign Up Form */}
@@ -159,7 +161,12 @@ export default function LoginScreen() {
                 style={[styles.toggleButton, !isSignUp && styles.activeToggle]}
                 onPress={() => setIsSignUp(false)}
               >
-                <Text style={[styles.toggleText, !isSignUp && styles.activeToggleText]}>
+                <Text
+                  style={[
+                    styles.toggleText,
+                    !isSignUp && styles.activeToggleText,
+                  ]}
+                >
                   Login
                 </Text>
               </TouchableOpacity>
@@ -167,7 +174,12 @@ export default function LoginScreen() {
                 style={[styles.toggleButton, isSignUp && styles.activeToggle]}
                 onPress={() => setIsSignUp(true)}
               >
-                <Text style={[styles.toggleText, isSignUp && styles.activeToggleText]}>
+                <Text
+                  style={[
+                    styles.toggleText,
+                    isSignUp && styles.activeToggleText,
+                  ]}
+                >
                   Sign Up
                 </Text>
               </TouchableOpacity>
@@ -176,7 +188,12 @@ export default function LoginScreen() {
             {isSignUp && (
               <>
                 <View style={styles.inputContainer}>
-                  <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
+                  <Ionicons
+                    name="person-outline"
+                    size={20}
+                    color="#666"
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="First Name"
@@ -188,7 +205,12 @@ export default function LoginScreen() {
                 </View>
 
                 <View style={styles.inputContainer}>
-                  <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
+                  <Ionicons
+                    name="person-outline"
+                    size={20}
+                    color="#666"
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="Last Name"
@@ -202,7 +224,12 @@ export default function LoginScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
+              <Ionicons
+                name="mail-outline"
+                size={20}
+                color="#666"
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Enter Email"
@@ -215,7 +242,12 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color="#666"
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Enter Password"
@@ -228,20 +260,20 @@ export default function LoginScreen() {
                 style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Ionicons 
-                  name={showPassword ? "eye-outline" : "eye-off-outline"} 
-                  size={20} 
-                  color="#666" 
+                <Ionicons
+                  name={showPassword ? "eye-outline" : "eye-off-outline"}
+                  size={20}
+                  color="#666"
                 />
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
-                styles.loginButton, 
+                styles.loginButton,
                 loading && styles.disabledButton,
-                loginButtonPressed && styles.loginButtonPressed
-              ]} 
+                loginButtonPressed && styles.loginButtonPressed,
+              ]}
               onPress={isSignUp ? handleSignUp : handleLogin}
               onPressIn={() => setLoginButtonPressed(true)}
               onPressOut={() => setLoginButtonPressed(false)}
@@ -251,7 +283,7 @@ export default function LoginScreen() {
                 <ActivityIndicator color="white" />
               ) : (
                 <Text style={styles.loginButtonText}>
-                  {isSignUp ? 'Create Account' : 'Login'}
+                  {isSignUp ? "Create Account" : "Login"}
                 </Text>
               )}
             </TouchableOpacity>
@@ -267,9 +299,9 @@ export default function LoginScreen() {
               </View>
             )}
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.guestButton}
-              onPress={() => router.push('/(tabs)/map')}
+              onPress={() => router.push("/(tabs)")}
             >
               <Text style={styles.guestButtonText}>Continue as a guest</Text>
             </TouchableOpacity>
@@ -289,7 +321,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#CCDBFD',
+    backgroundColor: "#CCDBFD",
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -299,8 +331,8 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   header: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingTop: 40,
     paddingBottom: 20,
     minHeight: 200,
@@ -311,10 +343,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   carsContainer: {
-    position: 'relative',
+    position: "relative",
     width: 200,
     height: 150,
-
   },
   formContainer: {
     paddingHorizontal: 30,
@@ -322,14 +353,14 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0F0F0',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0F0F0",
     borderRadius: 25,
     paddingHorizontal: 15,
     paddingVertical: 15,
     marginBottom: 15,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -344,19 +375,19 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   eyeIcon: {
     padding: 5,
   },
   loginButton: {
-    backgroundColor: '#84B4FF',
+    backgroundColor: "#84B4FF",
     borderRadius: 25,
     paddingVertical: 15,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -366,47 +397,47 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   loginButtonPressed: {
-    backgroundColor: '#6B9EFF',
+    backgroundColor: "#6B9EFF",
     transform: [{ scale: 0.98 }],
   },
   loginButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   linksContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 20,
   },
   linkText: {
-    color: '#333',
+    color: "#333",
     fontSize: 14,
   },
   guestButton: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 20,
   },
   guestButtonText: {
-    color: '#666',
+    color: "#666",
     fontSize: 14,
   },
   toggleContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 20,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: "#F0F0F0",
     borderRadius: 25,
     padding: 5,
   },
   toggleButton: {
     flex: 1,
     paddingVertical: 10,
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 20,
   },
   activeToggle: {
-    backgroundColor: 'white',
-    shadowColor: '#000',
+    backgroundColor: "white",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -417,27 +448,27 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   activeToggleText: {
-    color: '#333',
-    fontWeight: '600',
+    color: "#333",
+    fontWeight: "600",
   },
   disabledButton: {
-    backgroundColor: '#A0A0A0',
+    backgroundColor: "#A0A0A0",
   },
   noteContainer: {
     marginTop: 20,
     paddingVertical: 10,
     paddingHorizontal: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   noteText: {
     fontSize: 12,
-    color: '#666',
-    fontStyle: 'italic',
-    textAlign: 'center',
+    color: "#666",
+    fontStyle: "italic",
+    textAlign: "center",
   },
 });

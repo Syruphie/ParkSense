@@ -34,7 +34,7 @@ export default function HomeScreen() {
         {/* Header with Logo */}
         <View style={styles.header}>
           <Image
-            source={require("../../assets/images/ParkSense-Logo.png")}
+            source={require("@/assets/images/ParkSense-Logo.png")}
             style={styles.logo}
             resizeMode="contain"
           />

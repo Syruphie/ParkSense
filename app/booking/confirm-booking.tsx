@@ -88,7 +88,7 @@ export default function ConfirmBookingPage() {
           style={styles.confirmBtn}
           onPress={() =>
             router.push({
-              pathname: "/(tabs)/booking/remaining-time",
+              pathname: "/booking/remaining-time",
               params: {
                 zone: "ZONE 1",
                 spot: "32B",

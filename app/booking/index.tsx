@@ -1,22 +1,41 @@
 "use client";
 
+import ParkingDetailCard from "@/components/detailpage/ParkingDetailCard";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  FlatList,
-  Modal,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 
-const PARKING_OPTIONS = ["CPA Lot 888", "221 Centre St S", "116 2 Ave SW"];
+// const PARKING_OPTIONS = ["CPA Lot 888", "221 Centre St S", "116 2 Ave SW"];
 
 export default function BookingPage() {
   const router = useRouter();
+
+  let localParams: Record<string, any> = {};
+  try {
+    localParams = useLocalSearchParams();
+  } catch (e) {
+    console.warn("Failed to get params", e);
+  }
+
+  if (Object.keys(localParams).length === 0) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.header}>Missing Info</Text>
+        <Text style={{ padding: 20 }}>
+          Please navigate here from a valid parking lot.
+        </Text>
+      </View>
+    );
+  }
+
   const {
     address_desc: incomingAddress,
     stall_id: incomingStall,
@@ -24,7 +43,9 @@ export default function BookingPage() {
     html_zone_rate,
     max_time,
     price_zone,
-  } = useLocalSearchParams();
+  } = localParams;
+
+  console.log("BookingPage Params:", localParams);
 
   const [addressDesc, setAddressDesc] = useState(
     incomingAddress?.toString() || ""
@@ -32,8 +53,6 @@ export default function BookingPage() {
   const [licensePlate, setLicensePlate] = useState(
     incomingPlate?.toString() || "CXT5530"
   );
-
-  const [showDropdown, setShowDropdown] = useState(false);
 
   const [date, setDate] = useState(new Date());
   const [startTime, setStartTime] = useState(new Date());
@@ -62,48 +81,44 @@ export default function BookingPage() {
 
   const { total, duration } = calculateTotal();
 
+  const lot = {
+    html_zone_rate: html_zone_rate?.toString() || "",
+    max_time: max_time,
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Booking</Text>
       <View style={styles.formGroup}>
         <Text style={styles.label}>Parking Lot</Text>
-        <TouchableOpacity
-          style={styles.dropdownInput}
-          disabled={!!incomingAddress}
-          onPress={() => setShowDropdown(true)}
-        >
-          <Text style={styles.dropdownText}>
-            {addressDesc || "Select a parking lot"}
-          </Text>
-        </TouchableOpacity>
 
-        {/* Dropdown Modal */}
-        <Modal visible={showDropdown} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <FlatList
-                data={PARKING_OPTIONS}
-                keyExtractor={(item) => item}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.modalItem}
-                    onPress={() => {
-                      setAddressDesc(item);
-                      setShowDropdown(false);
-                    }}
-                  >
-                    <Text>{item}</Text>
-                  </TouchableOpacity>
-                )}
-              />
-              <TouchableOpacity onPress={() => setShowDropdown(false)}>
-                <Text style={{ textAlign: "center", marginTop: 10 }}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+        {!incomingAddress ? (
+          <GooglePlacesAutocomplete
+            placeholder="Search for a parking lot"
+            fetchDetails
+            onPress={(data, details = null) => {
+              setAddressDesc(data.description ?? "Unknown Location");
+            }}
+            query={{
+              key:
+                process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "YOUR_BACKUP_API_KEY",
+              language: "en",
+              types: "establishment",
+              keyword: "parking",
+              location: "51.0447,-114.0719", // Calgary downtown (optional center point)
+              radius: 3000,
+            }}
+            styles={{
+              textInput: styles.input,
+              listView: { backgroundColor: "#fff" },
+            }}
+            enablePoweredByContainer={false}
+          />
+        ) : (
+          <Text style={[styles.input, { paddingVertical: 14 }]}>
+            {addressDesc}
+          </Text>
+        )}
 
         <Text style={styles.label}>License Plate</Text>
         <TextInput
@@ -162,10 +177,12 @@ export default function BookingPage() {
 
         {html_zone_rate && (
           <View style={{ marginTop: 12 }}>
-            <Text style={styles.label}>Rate Info</Text>
-            <Text style={{ fontSize: 13, lineHeight: 18 }}>
-              {html_zone_rate.replace(/<[^>]+>/g, "").trim()}
-            </Text>
+            <ParkingDetailCard
+              lot={{
+                html_zone_rate: html_zone_rate,
+                max_time: max_time,
+              }}
+            />
           </View>
         )}
 
@@ -181,7 +198,7 @@ export default function BookingPage() {
           style={styles.continueBtn}
           onPress={() => {
             router.push({
-              pathname: "/(tabs)/booking/confirm-booking",
+              pathname: "/booking/confirm-booking",
               params: {
                 full_name: "Joy Wong",
                 address: addressDesc?.toString() ?? "",
