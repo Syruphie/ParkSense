@@ -1,4 +1,4 @@
-// app/confirm-booking.tsx
+// app/confirm-booking.tsx - Updated to use helper functions
 "use client";
 
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -10,11 +10,27 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+// Import our helper functions
+import { generateSpotNumber, getZoneDisplay } from "../types/calgary-parking";
 
 export default function ConfirmBookingPage() {
   const router = useRouter();
-  const { full_name, address, time_start, time_end, duration, total, license } =
-    useLocalSearchParams();
+  const { 
+    full_name, 
+    address, 
+    time_start, 
+    time_end, 
+    duration, 
+    total, 
+    license,
+    // Add these new params from the API
+    permit_zone,
+    stall_id,
+    zone_type,
+    address_desc,
+    price_zone,
+    globalid_guid
+  } = useLocalSearchParams();
 
   const formatTime = (iso: any) =>
     new Date(iso).toLocaleTimeString([], {
@@ -22,12 +38,44 @@ export default function ConfirmBookingPage() {
       minute: "2-digit",
     });
 
+  // Use helper functions instead of local ones
+  const lotData = {
+    permit_zone,
+    zone_type,
+    price_zone,
+    stall_id
+  };
+
+  const zoneDisplay = getZoneDisplay(lotData);
+  const spotNumber = generateSpotNumber(lotData);
+
+  const handleConfirmBooking = () => {
+    router.push({
+      pathname: "/booking/checkout-success",
+      params: {
+        full_name,
+        address: address_desc?.toString() || address?.toString() || "Unknown Location",
+        time_start,
+        time_end,
+        duration,
+        total,
+        license,
+        // Pass the real API data
+        zone: zoneDisplay,
+        spot: spotNumber,
+        permit_zone: permit_zone?.toString() || "",
+        zone_type: zone_type?.toString() || "",
+        price_zone: price_zone?.toString() || "",
+        globalid_guid: globalid_guid?.toString() || "",
+        booking_id: globalid_guid?.toString() || `booking_${Date.now()}`,
+      },
+    });
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* <Text style={styles.header}>Confirm Booking</Text> */}
-
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Details</Text>
+        <Text style={styles.sectionTitle}>Booking Details</Text>
 
         <View style={styles.detailRow}>
           <Text style={styles.label}>Full name:</Text>
@@ -36,7 +84,17 @@ export default function ConfirmBookingPage() {
 
         <View style={styles.detailRow}>
           <Text style={styles.label}>Location:</Text>
-          <Text style={styles.value}>{address}</Text>
+          <Text style={styles.value}>{address_desc || address}</Text>
+        </View>
+
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Zone:</Text>
+          <Text style={styles.value}>{zoneDisplay}</Text>
+        </View>
+
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Spot:</Text>
+          <Text style={styles.value}>#{spotNumber}</Text>
         </View>
 
         <View style={styles.detailRow}>
@@ -47,7 +105,7 @@ export default function ConfirmBookingPage() {
         </View>
 
         <View style={styles.detailRow}>
-          <Text style={styles.label}>Period:</Text>
+          <Text style={styles.label}>Duration:</Text>
           <Text style={styles.value}>
             {duration} hour{Number(duration) > 1 ? "s" : ""}
           </Text>
@@ -63,7 +121,7 @@ export default function ConfirmBookingPage() {
         <Text style={styles.sectionTitle}>Select Payment Type</Text>
 
         <TouchableOpacity style={styles.applePayBtn}>
-          <Text style={styles.applePayText}>Pay with  Pay</Text>
+          <Text style={styles.applePayText}>Pay with  Pay</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.googlePayBtn}>
@@ -86,17 +144,7 @@ export default function ConfirmBookingPage() {
 
         <TouchableOpacity
           style={styles.confirmBtn}
-          onPress={() =>
-            router.push({
-              pathname: "/booking/remaining-time",
-              params: {
-                zone: "ZONE 1",
-                spot: "32B",
-                time_start: "2025-07-22T16:05:00.000Z",
-                time_end: "2025-07-22T17:05:00.000Z",
-              },
-            })
-          }
+          onPress={handleConfirmBooking}
         >
           <Text style={styles.btnText}>Confirm Booking</Text>
         </TouchableOpacity>
@@ -111,17 +159,6 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
     flexGrow: 1,
-  },
-  header: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#fff",
-    backgroundColor: "#92C3FF",
-    alignSelf: "center",
-    paddingHorizontal: 40,
-    paddingVertical: 12,
-    borderRadius: 18,
-    marginBottom: 20,
   },
   card: {
     borderColor: "#aaa",

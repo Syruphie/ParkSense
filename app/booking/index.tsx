@@ -1,3 +1,4 @@
+// app/booking/index.tsx - Updated to pass real API data
 "use client";
 
 import ParkingDetailCard from "@/components/detailpage/ParkingDetailCard";
@@ -12,8 +13,7 @@ import {
   View,
 } from "react-native";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
-
-// const PARKING_OPTIONS = ["CPA Lot 888", "221 Centre St S", "116 2 Ave SW"];
+import { extractHourlyRate } from "../types/calgary-parking";
 
 export default function BookingPage() {
   const router = useRouter();
@@ -43,6 +43,13 @@ export default function BookingPage() {
     html_zone_rate,
     max_time,
     price_zone,
+    // Add these API fields
+    permit_zone,
+    zone_type,
+    globalid_guid,
+    rate_amount,
+    rate_period_desc,
+    max_stay_desc,
   } = localParams;
 
   console.log("BookingPage Params:", localParams);
@@ -60,15 +67,12 @@ export default function BookingPage() {
     new Date(new Date().getTime() + 3600000)
   );
 
-  const extractRate = (html: string | undefined): number => {
-    if (!html) return 7.0;
-    const matches = html.match(/\$([\d.]+)/g);
-    if (!matches) return 7.0;
-    const rates = matches.map((r) => parseFloat(r.replace("$", "")));
-    return rates.length ? rates[0] : 7.0;
-  };
-
-  const HOURLY_RATE = extractRate(html_zone_rate?.toString());
+  
+  const HOURLY_RATE = extractHourlyRate({
+    html_zone_rate: html_zone_rate?.toString(),
+    rate_amount: rate_amount
+  });
+  
   const calculateTotal = () => {
     const durationMs = endTime.getTime() - startTime.getTime();
     const durationHours = Math.max(durationMs / (1000 * 60 * 60), 0);
@@ -81,9 +85,47 @@ export default function BookingPage() {
 
   const { total, duration } = calculateTotal();
 
+  // Generate spot number if not available
+  const generateSpotId = () => {
+    if (incomingStall) return incomingStall.toString();
+    const spotNum = Math.floor(Math.random() * 99) + 1;
+    const spotLetter = ['A', 'B', 'C', 'D'][Math.floor(Math.random() * 4)];
+    return `${spotNum}${spotLetter}`;
+  };
+
+  const handleContinue = () => {
+    router.push({
+      pathname: "/booking/confirm-booking",
+      params: {
+        full_name: "Joy Wong",
+        address: addressDesc?.toString() ?? "",
+        time_start: startTime.toISOString(),
+        time_end: endTime.toISOString(),
+        duration: duration.toString(),
+        total: total.toString(),
+        license: licensePlate,
+        // Pass all the API data
+        address_desc: addressDesc,
+        permit_zone: permit_zone?.toString() || "",
+        stall_id: generateSpotId(),
+        zone_type: zone_type?.toString() || "",
+        price_zone: price_zone?.toString() || "",
+        globalid_guid: globalid_guid?.toString() || "",
+        html_zone_rate: html_zone_rate?.toString() || "",
+        max_time: max_time?.toString() || "",
+        rate_amount: rate_amount?.toString() || "",
+        rate_period_desc: rate_period_desc?.toString() || "",
+        max_stay_desc: max_stay_desc?.toString() || "",
+      },
+    });
+  };
+
   const lot = {
     html_zone_rate: html_zone_rate?.toString() || "",
     max_time: max_time,
+    rate_amount: rate_amount,
+    rate_period_desc: rate_period_desc,
+    max_stay_desc: max_stay_desc,
   };
 
   return (
@@ -105,7 +147,7 @@ export default function BookingPage() {
               language: "en",
               types: "establishment",
               keyword: "parking",
-              location: "51.0447,-114.0719", // Calgary downtown (optional center point)
+              location: "51.0447,-114.0719", // Calgary downtown
               radius: 3000,
             }}
             styles={{
@@ -115,9 +157,18 @@ export default function BookingPage() {
             enablePoweredByContainer={false}
           />
         ) : (
-          <Text style={[styles.input, { paddingVertical: 14 }]}>
-            {addressDesc}
-          </Text>
+          <View style={styles.locationContainer}>
+            <Text style={[styles.input, { paddingVertical: 14 }]}>
+              {addressDesc}
+            </Text>
+            {/* Show zone info if available */}
+            {(permit_zone || zone_type || price_zone) && (
+              <Text style={styles.zoneInfo}>
+                Zone: {permit_zone || zone_type || price_zone}
+                {rate_period_desc && ` • ${rate_period_desc}`}
+              </Text>
+            )}
+          </View>
         )}
 
         <Text style={styles.label}>License Plate</Text>
@@ -145,7 +196,7 @@ export default function BookingPage() {
 
         <View style={styles.timeRow}>
           <View style={styles.timeBox}>
-            <Text style={styles.label}>Start Hour</Text>
+            <Text style={styles.label}>Start Time</Text>
             <View style={styles.greyBox}>
               <DateTimePicker
                 value={startTime}
@@ -160,7 +211,7 @@ export default function BookingPage() {
           </View>
 
           <View style={styles.timeBox}>
-            <Text style={styles.label}>End Hour</Text>
+            <Text style={styles.label}>End Time</Text>
             <View style={styles.greyBox}>
               <DateTimePicker
                 value={endTime}
@@ -175,14 +226,10 @@ export default function BookingPage() {
           </View>
         </View>
 
-        {html_zone_rate && (
+        {/* Show parking details if we have rate info */}
+        {(html_zone_rate || rate_amount) && (
           <View style={{ marginTop: 12 }}>
-            <ParkingDetailCard
-              lot={{
-                html_zone_rate: html_zone_rate,
-                max_time: max_time,
-              }}
-            />
+            <ParkingDetailCard lot={lot} />
           </View>
         )}
 
@@ -196,20 +243,7 @@ export default function BookingPage() {
 
         <TouchableOpacity
           style={styles.continueBtn}
-          onPress={() => {
-            router.push({
-              pathname: "/booking/confirm-booking",
-              params: {
-                full_name: "Joy Wong",
-                address: addressDesc?.toString() ?? "",
-                time_start: startTime.toISOString(),
-                time_end: endTime.toISOString(),
-                duration: duration.toString(),
-                total: total.toString(),
-                license: licensePlate,
-              },
-            });
-          }}
+          onPress={handleContinue}
         >
           <Text style={styles.continueText}>Continue</Text>
         </TouchableOpacity>
@@ -251,14 +285,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: "#000",
   },
-  dropdownInput: {
-    backgroundColor: "#eee",
-    borderRadius: 6,
-    padding: 12,
+  locationContainer: {
     marginTop: 4,
   },
-  dropdownText: {
-    color: "#000",
+  zoneInfo: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 4,
+    fontStyle: "italic",
   },
   greyBox: {
     backgroundColor: "#eee",
@@ -310,21 +344,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "#000000aa",
-    justifyContent: "center",
-    paddingHorizontal: 40,
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-  },
-  modalItem: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderColor: "#ccc",
   },
 });
