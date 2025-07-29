@@ -15,7 +15,11 @@ import MapView, { Marker, PROVIDER_DEFAULT, UrlTile } from "react-native-maps";
 
 let streetViewUsageCount = 0;
 const MAX_USAGE = 200;
-const getStreetViewImage = (lat, lng, apiKey) => {
+const getStreetViewImage = (
+  lat: number,
+  lng: number,
+  apiKey: string
+): string | null => {
   if (streetViewUsageCount >= MAX_USAGE) return null;
   streetViewUsageCount++;
   return `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=90&pitch=10&key=${apiKey}`;
@@ -40,18 +44,38 @@ const SHORTCUTS = {
 };
 
 export default function MapPage() {
-  const mapRef = useRef(null);
-  const router = useRouter();
-  const [marker, setMarker] = useState(null);
-  const [parkingLots, setParkingLots] = useState([]);
-  const [selectedLot, setSelectedLot] = useState(null);
+  type ParkingLot = {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    address: string;
+    imageUrl: string;
+  };
 
-  const handleMapPress = (event) => {
+  const mapRef = useRef<MapView | null>(null);
+  const router = useRouter();
+  const [marker, setMarker] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
+  const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
+
+  const handleMapPress = (event: {
+    nativeEvent: { coordinate: { latitude: number; longitude: number } };
+  }) => {
     const { coordinate } = event.nativeEvent;
     setMarker(coordinate);
   };
 
-  const flyTo = ({ latitude, longitude }) => {
+  const flyTo = ({
+    latitude,
+    longitude,
+  }: {
+    latitude: number;
+    longitude: number;
+  }) => {
     mapRef.current?.animateToRegion(
       {
         latitude,
@@ -100,11 +124,11 @@ export default function MapPage() {
                 getStreetViewImage(
                   lat,
                   lng,
-                  process.env.EXPO_PUBLIC_GOOGLE_API_KEY
+                  process.env.EXPO_PUBLIC_GOOGLE_API_KEY || ""
                 ) || "https://via.placeholder.com/300x200",
             };
           })
-          .filter(Boolean);
+          .filter((lot): lot is ParkingLot => lot !== null);
 
         setParkingLots(parsed);
       } catch (err) {
