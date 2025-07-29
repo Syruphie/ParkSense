@@ -10,6 +10,15 @@ export default function HeaderUserIcon() {
 
   useEffect(() => {
     const fetchUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.warn("No session found. Possibly guest user.");
+        return;
+      }
+
       const { data, error } = await supabase.auth.getUser();
 
       if (error) {
@@ -32,8 +41,8 @@ export default function HeaderUserIcon() {
     if (userFirstName) {
       // Logged-in user
       Alert.alert(
-        "Log Out",
-        `Are you sure you want to log out, ${userFirstName}?`,
+        `Loging Out? ${userFirstName}`,
+        `Are you sure you want to log out?`,
         [
           { text: "Cancel", style: "cancel" },
           {
