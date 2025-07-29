@@ -1,4 +1,3 @@
-// app/booking/index.tsx - Updated to pass real API data
 "use client";
 
 import ParkingDetailCard from "@/components/detailpage/ParkingDetailCard";
@@ -6,6 +5,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -46,7 +46,6 @@ export default function BookingPage() {
     html_zone_rate,
     max_time,
     price_zone,
-    // Add these API fields
     permit_zone,
     zone_type,
     globalid_guid,
@@ -55,15 +54,12 @@ export default function BookingPage() {
     max_stay_desc,
   } = localParams;
 
-  console.log("BookingPage Params:", localParams);
-
   const [addressDesc, setAddressDesc] = useState(
     incomingAddress?.toString() || ""
   );
   const [licensePlate, setLicensePlate] = useState(
     incomingPlate?.toString() || "CXT5530"
   );
-
   const [date, setDate] = useState(new Date());
   const [startTime, setStartTime] = useState(new Date());
   const [endTime, setEndTime] = useState(
@@ -87,7 +83,6 @@ export default function BookingPage() {
 
   const { total, duration } = calculateTotal();
 
-  // Generate spot number if not available
   const generateSpotId = () => {
     if (incomingStall) return incomingStall.toString();
     const spotNum = Math.floor(Math.random() * 99) + 1;
@@ -100,13 +95,12 @@ export default function BookingPage() {
       pathname: "/booking/confirm-booking",
       params: {
         full_name: "Joy Wong",
-        address: addressDesc?.toString() ?? "",
+        address: addressDesc ?? "",
         time_start: startTime.toISOString(),
         time_end: endTime.toISOString(),
         duration: duration.toString(),
         total: total.toString(),
         license: licensePlate,
-        // Pass all the API data
         address_desc: addressDesc,
         permit_zone: permit_zone?.toString() || "",
         stall_id: generateSpotId(),
@@ -133,9 +127,8 @@ export default function BookingPage() {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Booking</Text>
-      <View style={styles.formGroup}>
+      <ScrollView style={styles.formGroup} contentContainerStyle={{ paddingBottom: 100 }}>
         <Text style={styles.label}>Parking Lot</Text>
-
         {!incomingAddress ? (
           <GooglePlacesAutocomplete
             placeholder="Search for a parking lot"
@@ -144,12 +137,11 @@ export default function BookingPage() {
               setAddressDesc(data.description ?? "Unknown Location");
             }}
             query={{
-              key:
-                process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "YOUR_BACKUP_API_KEY",
+              key: process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "YOUR_BACKUP_API_KEY",
               language: "en",
               types: "establishment",
               keyword: "parking",
-              location: "51.0447,-114.0719", // Calgary downtown
+              location: "51.0447,-114.0719",
               radius: 3000,
             }}
             styles={{
@@ -160,10 +152,7 @@ export default function BookingPage() {
           />
         ) : (
           <View style={styles.locationContainer}>
-            <Text style={[styles.input, { paddingVertical: 14 }]}>
-              {addressDesc}
-            </Text>
-            {/* Show zone info if available */}
+            <Text style={[styles.input, { paddingVertical: 14 }]}>{addressDesc}</Text>
             {(permit_zone || zone_type || price_zone) && (
               <Text style={styles.zoneInfo}>
                 Zone: {permit_zone || zone_type || price_zone}
@@ -183,10 +172,7 @@ export default function BookingPage() {
 
         <Text style={styles.label}>Date</Text>
         <View style={styles.greyBox}>
-          <TouchableOpacity
-            onPress={() => setShowDatePicker(true)}
-            style={styles.greyBox}
-          >
+          <TouchableOpacity onPress={() => setShowDatePicker(true)}>
             <Text>{date.toDateString()}</Text>
           </TouchableOpacity>
           {showDatePicker && (
@@ -208,16 +194,8 @@ export default function BookingPage() {
           <View style={styles.timeBox}>
             <Text style={styles.label}>Start Time</Text>
             <View style={styles.greyBox}>
-              <TouchableOpacity
-                onPress={() => setShowStartTime(true)}
-                style={styles.greyBox}
-              >
-                <Text>
-                  {startTime.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </Text>
+              <TouchableOpacity onPress={() => setShowStartTime(true)}>
+                <Text>{startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Text>
               </TouchableOpacity>
               {showStartTime && (
                 <DateTimePicker
@@ -238,16 +216,8 @@ export default function BookingPage() {
           <View style={styles.timeBox}>
             <Text style={styles.label}>End Time</Text>
             <View style={styles.greyBox}>
-              <TouchableOpacity
-                onPress={() => setShowEndTime(true)}
-                style={styles.greyBox}
-              >
-                <Text>
-                  {endTime.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </Text>
+              <TouchableOpacity onPress={() => setShowEndTime(true)}>
+                <Text>{endTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Text>
               </TouchableOpacity>
               {showEndTime && (
                 <DateTimePicker
@@ -266,7 +236,6 @@ export default function BookingPage() {
           </View>
         </View>
 
-        {/* Show parking details if we have rate info */}
         {(html_zone_rate || rate_amount) && (
           <View style={{ marginTop: 12 }}>
             <ParkingDetailCard lot={lot} />
@@ -276,15 +245,13 @@ export default function BookingPage() {
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalPrice}>${total}</Text>
-          <Text style={styles.totalUnit}>
-            / {duration} hour{duration > 1 ? "s" : ""}
-          </Text>
+          <Text style={styles.totalUnit}>/ {duration} hour{duration > 1 ? "s" : ""}</Text>
         </View>
 
         <TouchableOpacity style={styles.continueBtn} onPress={handleContinue}>
           <Text style={styles.continueText}>Continue</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -336,6 +303,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 10,
     marginTop: 4,
+    paddingVertical: 12,
   },
   timeRow: {
     flexDirection: "row",
