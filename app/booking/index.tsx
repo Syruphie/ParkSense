@@ -17,6 +17,9 @@ import { extractHourlyRate } from "../types/calgary-parking";
 
 export default function BookingPage() {
   const router = useRouter();
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartTime, setShowStartTime] = useState(false);
+  const [showEndTime, setShowEndTime] = useState(false);
 
   let localParams: Record<string, any> = {};
   try {
@@ -67,12 +70,11 @@ export default function BookingPage() {
     new Date(new Date().getTime() + 3600000)
   );
 
-  
   const HOURLY_RATE = extractHourlyRate({
     html_zone_rate: html_zone_rate?.toString(),
-    rate_amount: rate_amount
+    rate_amount: rate_amount,
   });
-  
+
   const calculateTotal = () => {
     const durationMs = endTime.getTime() - startTime.getTime();
     const durationHours = Math.max(durationMs / (1000 * 60 * 60), 0);
@@ -89,7 +91,7 @@ export default function BookingPage() {
   const generateSpotId = () => {
     if (incomingStall) return incomingStall.toString();
     const spotNum = Math.floor(Math.random() * 99) + 1;
-    const spotLetter = ['A', 'B', 'C', 'D'][Math.floor(Math.random() * 4)];
+    const spotLetter = ["A", "B", "C", "D"][Math.floor(Math.random() * 4)];
     return `${spotNum}${spotLetter}`;
   };
 
@@ -181,47 +183,85 @@ export default function BookingPage() {
 
         <Text style={styles.label}>Date</Text>
         <View style={styles.greyBox}>
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display="default"
-            textColor="#000"
-            onChange={(event, selectedDate) => {
-              if (event.type === "set" && selectedDate) {
-                setDate(selectedDate);
-              }
-            }}
-          />
+          <TouchableOpacity
+            onPress={() => setShowDatePicker(true)}
+            style={styles.greyBox}
+          >
+            <Text>{date.toDateString()}</Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display="default"
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(false);
+                if (event.type === "set" && selectedDate) {
+                  setDate(selectedDate);
+                }
+              }}
+            />
+          )}
         </View>
 
         <View style={styles.timeRow}>
           <View style={styles.timeBox}>
             <Text style={styles.label}>Start Time</Text>
             <View style={styles.greyBox}>
-              <DateTimePicker
-                value={startTime}
-                mode="time"
-                display="default"
-                textColor="#000"
-                onChange={(e, selectedTime) => {
-                  if (selectedTime) setStartTime(selectedTime);
-                }}
-              />
+              <TouchableOpacity
+                onPress={() => setShowStartTime(true)}
+                style={styles.greyBox}
+              >
+                <Text>
+                  {startTime.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
+              </TouchableOpacity>
+              {showStartTime && (
+                <DateTimePicker
+                  value={startTime}
+                  mode="time"
+                  display="default"
+                  onChange={(event, selectedTime) => {
+                    setShowStartTime(false);
+                    if (event.type === "set" && selectedTime) {
+                      setStartTime(selectedTime);
+                    }
+                  }}
+                />
+              )}
             </View>
           </View>
 
           <View style={styles.timeBox}>
             <Text style={styles.label}>End Time</Text>
             <View style={styles.greyBox}>
-              <DateTimePicker
-                value={endTime}
-                mode="time"
-                display="default"
-                textColor="#000"
-                onChange={(e, selectedTime) => {
-                  if (selectedTime) setEndTime(selectedTime);
-                }}
-              />
+              <TouchableOpacity
+                onPress={() => setShowEndTime(true)}
+                style={styles.greyBox}
+              >
+                <Text>
+                  {endTime.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
+              </TouchableOpacity>
+              {showEndTime && (
+                <DateTimePicker
+                  value={endTime}
+                  mode="time"
+                  display="default"
+                  onChange={(event, selectedTime) => {
+                    setShowEndTime(false);
+                    if (event.type === "set" && selectedTime) {
+                      setEndTime(selectedTime);
+                    }
+                  }}
+                />
+              )}
             </View>
           </View>
         </View>
@@ -241,10 +281,7 @@ export default function BookingPage() {
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.continueBtn}
-          onPress={handleContinue}
-        >
+        <TouchableOpacity style={styles.continueBtn} onPress={handleContinue}>
           <Text style={styles.continueText}>Continue</Text>
         </TouchableOpacity>
       </View>
