@@ -66,10 +66,13 @@ export default function BookingPage() {
     new Date(new Date().getTime() + 3600000)
   );
 
-  const HOURLY_RATE = extractHourlyRate({
-    html_zone_rate: html_zone_rate?.toString(),
-    rate_amount: rate_amount,
-  });
+  const HOURLY_RATE = extractHourlyRate(
+    {
+      html_zone_rate: html_zone_rate?.toString(),
+      rate_amount: rate_amount,
+    },
+    startTime
+  );
 
   const calculateTotal = () => {
     const durationMs = endTime.getTime() - startTime.getTime();
@@ -127,7 +130,10 @@ export default function BookingPage() {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Booking</Text>
-      <ScrollView style={styles.formGroup} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView
+        style={styles.formGroup}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
         <Text style={styles.label}>Parking Lot</Text>
         {!incomingAddress ? (
           <GooglePlacesAutocomplete
@@ -137,7 +143,8 @@ export default function BookingPage() {
               setAddressDesc(data.description ?? "Unknown Location");
             }}
             query={{
-              key: process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "YOUR_BACKUP_API_KEY",
+              key:
+                process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "YOUR_BACKUP_API_KEY",
               language: "en",
               types: "establishment",
               keyword: "parking",
@@ -152,7 +159,9 @@ export default function BookingPage() {
           />
         ) : (
           <View style={styles.locationContainer}>
-            <Text style={[styles.input, { paddingVertical: 14 }]}>{addressDesc}</Text>
+            <Text style={[styles.input, { paddingVertical: 14 }]}>
+              {addressDesc}
+            </Text>
             {(permit_zone || zone_type || price_zone) && (
               <Text style={styles.zoneInfo}>
                 Zone: {permit_zone || zone_type || price_zone}
@@ -195,7 +204,12 @@ export default function BookingPage() {
             <Text style={styles.label}>Start Time</Text>
             <View style={styles.greyBox}>
               <TouchableOpacity onPress={() => setShowStartTime(true)}>
-                <Text>{startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Text>
+                <Text>
+                  {startTime.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
               </TouchableOpacity>
               {showStartTime && (
                 <DateTimePicker
@@ -217,7 +231,12 @@ export default function BookingPage() {
             <Text style={styles.label}>End Time</Text>
             <View style={styles.greyBox}>
               <TouchableOpacity onPress={() => setShowEndTime(true)}>
-                <Text>{endTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Text>
+                <Text>
+                  {endTime.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
               </TouchableOpacity>
               {showEndTime && (
                 <DateTimePicker
@@ -245,7 +264,9 @@ export default function BookingPage() {
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalPrice}>${total}</Text>
-          <Text style={styles.totalUnit}>/ {duration} hour{duration > 1 ? "s" : ""}</Text>
+          <Text style={styles.totalUnit}>
+            / {duration} hour{duration > 1 ? "s" : ""}
+          </Text>
         </View>
 
         <TouchableOpacity style={styles.continueBtn} onPress={handleContinue}>

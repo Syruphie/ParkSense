@@ -122,22 +122,62 @@ export const generateSpotNumber = (lot: CalgaryParkingLot | any): string => {
 };
 
 // Helper function to extract hourly rate
-export const extractHourlyRate = (lot: CalgaryParkingLot | any): number => {
-  // Try html_zone_rate first
-  if (lot?.html_zone_rate) {
-    const matches = lot.html_zone_rate.match(/\$([\d.]+)/g);
-    if (matches) {
-      const rates = matches.map((r: string) => parseFloat(r.replace("$", "")));
-      if (rates.length) return rates[0];
+export const extractHourlyRate = (
+  lot: CalgaryParkingLot | any,
+  now: Date = new Date()
+): number => {
+  const html = lot?.html_zone_rate?.toLowerCase() || "";
+
+  // If free parking is mentioned at all, and no time ranges match, default to 0
+  const mentionsFree = html.includes("free");
+
+  // Match time-based blocks with price like: "Mon-Fri 9:00 AM to 11:00 AM</b><br><br>$4.25"
+  const regex = /<b>(.*?)<\/b><br><br>\$?([\d.]+)?/g;
+  const blocks: { label: string; price: number }[] = [];
+
+  let match;
+  while ((match = regex.exec(html)) !== null) {
+    const label = match[1];
+    const price = parseFloat(match[2]);
+
+    if (!isNaN(price)) {
+      blocks.push({ label, price });
     }
   }
-  
-  // Try rate_amount
-  if (lot?.rate_amount) {
-    const amount = parseFloat(lot.rate_amount.toString());
-    if (!isNaN(amount)) return amount;
+
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+
+  for (const block of blocks) {
+    const timeMatch = block.label.match(/(\d{1,2}:\d{2} (AM|PM)) to (\d{1,2}:\d{2} (AM|PM))/i);
+    if (!timeMatch) continue;
+
+    const [, startStr,, endStr] = timeMatch;
+
+    const start = new Date(now);
+    const end = new Date(now);
+
+    start.setHours(convertTo24Hour(startStr));
+    start.setMinutes(parseInt(startStr.split(":")[1]));
+    end.setHours(convertTo24Hour(endStr));
+    end.setMinutes(parseInt(endStr.split(":")[1]));
+
+    if (now >= start && now <= end) {
+      return block.price;
+    }
   }
-  
-  // Default rate
-  return 7.0;
+
+  // If no match but contains "Free", return 0
+  return mentionsFree ? 0 : 7.0; // fallback to $7/hr if unknown
 };
+
+// Helper: convert "1:30 PM" to 13
+function convertTo24Hour(timeStr: string): number {
+  const [time, meridiem] = timeStr.trim().split(" ");
+  let [hour, min] = time.split(":").map(Number);
+
+  if (meridiem.toLowerCase() === "pm" && hour !== 12) hour += 12;
+  if (meridiem.toLowerCase() === "am" && hour === 12) hour = 0;
+
+  return hour;
+}
