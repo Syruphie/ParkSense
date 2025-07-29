@@ -92,7 +92,7 @@ const BookingCard = ({ lotName, date, price, duration, image }: any) => {
 
   const handlePress = () => {
     router.push({
-      pathname: "/booking/checkout-success",
+      pathname: "/record/recording",
       params: {
         full_name: "John Doe",
         address: "123 Parking Street",
