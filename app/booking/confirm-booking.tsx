@@ -11,17 +11,19 @@ import {
   View,
 } from "react-native";
 // Import our helper functions
+import { addBooking } from "@/lib/booking_crud";
+import { supabase } from "@/lib/supabase";
 import { generateSpotNumber, getZoneDisplay } from "../types/calgary-parking";
 
 export default function ConfirmBookingPage() {
   const router = useRouter();
-  const { 
-    full_name, 
-    address, 
-    time_start, 
-    time_end, 
-    duration, 
-    total, 
+  const {
+    full_name,
+    address,
+    time_start,
+    time_end,
+    duration,
+    total,
     license,
     // Add these new params from the API
     permit_zone,
@@ -29,7 +31,7 @@ export default function ConfirmBookingPage() {
     zone_type,
     address_desc,
     price_zone,
-    globalid_guid
+    globalid_guid,
   } = useLocalSearchParams();
 
   const formatTime = (iso: any) =>
@@ -43,33 +45,61 @@ export default function ConfirmBookingPage() {
     permit_zone,
     zone_type,
     price_zone,
-    stall_id
+    stall_id,
   };
 
   const zoneDisplay = getZoneDisplay(lotData);
   const spotNumber = generateSpotNumber(lotData);
 
-  const handleConfirmBooking = () => {
-    router.push({
-      pathname: "/booking/checkout-success",
-      params: {
-        full_name,
-        address: address_desc?.toString() || address?.toString() || "Unknown Location",
-        time_start,
-        time_end,
-        duration,
-        total,
-        license,
-        // Pass the real API data
-        zone: zoneDisplay,
-        spot: spotNumber,
-        permit_zone: permit_zone?.toString() || "",
-        zone_type: zone_type?.toString() || "",
-        price_zone: price_zone?.toString() || "",
-        globalid_guid: globalid_guid?.toString() || "",
-        booking_id: globalid_guid?.toString() || `booking_${Date.now()}`,
-      },
-    });
+  const safeToString = (val: string | string[] | undefined): string =>
+    Array.isArray(val) ? val[0] : val ?? "";
+
+  const handleConfirmBooking = async () => {
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      const user = data?.user;
+
+      if (!user) {
+        console.error("No user logged in");
+        return;
+      }
+
+      const userId = user.id;
+
+      // Fetch first_name and last_name from user_details table
+      const { data: profile, error: profileError } = await supabase
+        .from("user_details")
+        .select("first_name, last_name")
+        .eq("uuid", userId)
+        .single();
+
+      if (profileError || !profile) {
+        console.error("Failed to fetch user details:", profileError?.message);
+        return;
+      }
+
+      await addBooking({
+        user_id: userId,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        license: safeToString(license),
+        address: safeToString(address ?? address_desc),
+        zone: getZoneDisplay(lotData),
+        spot: generateSpotNumber(lotData),
+        time_start: safeToString(time_start),
+        time_end: safeToString(time_end),
+        duration: parseFloat(safeToString(duration)),
+        total: parseFloat(safeToString(total)),
+      });
+
+      router.replace("/(tabs)/record");
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error("Error saving booking:", error.message);
+      } else {
+        console.error("Unknown error saving booking:", error);
+      }
+    }
   };
 
   return (
@@ -121,7 +151,7 @@ export default function ConfirmBookingPage() {
         <Text style={styles.sectionTitle}>Select Payment Type</Text>
 
         <TouchableOpacity style={styles.applePayBtn}>
-          <Text style={styles.applePayText}>Pay with  Pay</Text>
+          <Text style={styles.applePayText}>Pay with Pay</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.googlePayBtn}>

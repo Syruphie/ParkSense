@@ -1,8 +1,13 @@
+import { CalgaryParkingLot } from "@/app/types/calgary-parking";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-export default function ParkingDetailCard({ lot }) {
-  const parseHtmlRate = (html) => {
+interface Props {
+  lot: CalgaryParkingLot;
+}
+
+export default function ParkingDetailCard({ lot }: Props) {
+  const parseHtmlRate = (html: string) => {
     const regex = /<b>(.*?)<\/b><br><br>\$?([\d.]+)?(?: per Hour)?/gi;
     const entries = [];
     let match;

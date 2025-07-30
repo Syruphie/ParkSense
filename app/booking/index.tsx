@@ -1,6 +1,7 @@
 "use client";
 
 import ParkingDetailCard from "@/components/detailpage/ParkingDetailCard";
+import { getCurrentUserNames } from "@/components/user_session";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -93,11 +94,13 @@ export default function BookingPage() {
     return `${spotNum}${spotLetter}`;
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    const { first_name, last_name } = await getCurrentUserNames();
+
     router.push({
       pathname: "/booking/confirm-booking",
       params: {
-        full_name: "Joy Wong",
+        full_name: `${first_name} ${last_name}`.trim(),
         address: addressDesc ?? "",
         time_start: startTime.toISOString(),
         time_end: endTime.toISOString(),
