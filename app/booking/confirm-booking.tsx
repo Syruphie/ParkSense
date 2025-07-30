@@ -50,6 +50,7 @@ export default function ConfirmBookingPage() {
 
   const zoneDisplay = getZoneDisplay(lotData);
   const spotNumber = generateSpotNumber(lotData);
+  const { date } = useLocalSearchParams(); // already passed as ISO string
 
   const safeToString = (val: string | string[] | undefined): string =>
     Array.isArray(val) ? val[0] : val ?? "";
@@ -90,9 +91,10 @@ export default function ConfirmBookingPage() {
         time_end: safeToString(time_end),
         duration: parseFloat(safeToString(duration)),
         total: parseFloat(safeToString(total)),
+        booking_date: new Date(safeToString(date)).toISOString().split("T")[0], // → 'YYYY-MM-DD'
       });
 
-      router.replace("/(tabs)/record");
+      router.replace("/booking/checkout-success");
     } catch (error) {
       if (error instanceof Error) {
         console.error("Error saving booking:", error.message);
@@ -125,6 +127,13 @@ export default function ConfirmBookingPage() {
         <View style={styles.detailRow}>
           <Text style={styles.label}>Spot:</Text>
           <Text style={styles.value}>#{spotNumber}</Text>
+        </View>
+
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Booking Date:</Text>
+          <Text style={styles.value}>
+            {new Date(safeToString(date)).toDateString()}
+          </Text>
         </View>
 
         <View style={styles.detailRow}>

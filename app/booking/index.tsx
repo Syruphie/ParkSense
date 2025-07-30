@@ -102,8 +102,12 @@ export default function BookingPage() {
       params: {
         full_name: `${first_name} ${last_name}`.trim(),
         address: addressDesc ?? "",
-        time_start: startTime.toISOString(),
-        time_end: endTime.toISOString(),
+        time_start: new Date(
+          date.setHours(startTime.getHours(), startTime.getMinutes())
+        ).toISOString(),
+        time_end: new Date(
+          date.setHours(endTime.getHours(), endTime.getMinutes())
+        ).toISOString(),
         duration: duration.toString(),
         total: total.toString(),
         license: licensePlate,
@@ -118,6 +122,7 @@ export default function BookingPage() {
         rate_amount: rate_amount?.toString() || "",
         rate_period_desc: rate_period_desc?.toString() || "",
         max_stay_desc: max_stay_desc?.toString() || "",
+        date: date.toISOString(), // ✅ ADD THIS
       },
     });
   };

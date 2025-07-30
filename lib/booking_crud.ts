@@ -17,6 +17,7 @@ export type Booking = {
   time_end: string;
   duration: number;
   total: number;
+  booking_date: string; // ✅ NEW
   created_at?: string;
 };
 
