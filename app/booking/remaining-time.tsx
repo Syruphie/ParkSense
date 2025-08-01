@@ -61,13 +61,16 @@ export default function EnhancedRemainingTimePage() {
   const [remainingTime, setRemainingTime] = useState(() =>
     Math.max(endDate.getTime() - Date.now(), 0)
   );
+  const [originalEndTime, setOriginalEndTime] = useState(endDate); // Track original end time
+  const [currentEndTime, setCurrentEndTime] = useState(endDate); // Track current end time (after extensions)
+  const [totalExtended, setTotalExtended] = useState(0); // Track total minutes extended
 
   const [pulseAnim] = useState(new Animated.Value(1));
   const [progressWidth] = useState(new Animated.Value(100));
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const timeLeft = Math.max(endDate.getTime() - Date.now(), 0);
+      const timeLeft = Math.max(currentEndTime.getTime() - Date.now(), 0); // Use currentEndTime
       setRemainingTime(timeLeft);
       
       // Update progress bar
@@ -80,7 +83,7 @@ export default function EnhancedRemainingTimePage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [endDate, totalDuration]);
+  }, [currentEndTime, totalDuration]); // Add currentEndTime to dependencies
 
   useEffect(() => {
     // Pulse animation for low time warning
@@ -149,13 +152,28 @@ export default function EnhancedRemainingTimePage() {
         { text: "Cancel", style: "cancel" },
         { 
           text: "Extend +30min ($3.50)", 
-          onPress: () => Alert.alert("Extended", "Your parking has been extended by 30 minutes.")
+          onPress: () => extendTime(30, 3.50)
         },
         { 
           text: "Extend +1hr ($7.00)", 
-          onPress: () => Alert.alert("Extended", "Your parking has been extended by 1 hour.")
+          onPress: () => extendTime(60, 7.00)
         }
       ]
+    );
+  };
+
+  const extendTime = (minutes: number, cost: number) => {
+    const newEndTime = new Date(currentEndTime.getTime() + minutes * 60 * 1000);
+    setCurrentEndTime(newEndTime);
+    setTotalExtended(prev => prev + minutes);
+    
+    Alert.alert(
+      "⏰ Time Extended!", 
+      `Your parking has been extended by ${minutes} minutes.\n\nNew end time: ${newEndTime.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })}\n\nAdditional cost: $${cost.toFixed(2)}`,
+      [{ text: "Great!" }]
     );
   };
 
@@ -261,6 +279,16 @@ export default function EnhancedRemainingTimePage() {
         </View>
       </View>
 
+      {/* Extended Time Indicator */}
+      {totalExtended > 0 && (
+        <View style={styles.extendedNotice}>
+          <Ionicons name="time" size={16} color="#4CAF50" />
+          <Text style={styles.extendedNoticeText}>
+            Extended by {totalExtended} minutes
+          </Text>
+        </View>
+      )}
+
       {/* Warning Messages */}
       {isLowTime && (
         <View style={[styles.warningContainer, isCriticalTime && styles.criticalWarning]}>
@@ -292,7 +320,10 @@ export default function EnhancedRemainingTimePage() {
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Session Time</Text>
           <Text style={styles.detailValue}>
-            {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {currentEndTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {currentEndTime.getTime() !== originalEndTime.getTime() && (
+              <Text style={styles.extendedIndicator}> (Extended)</Text>
+            )}
           </Text>
         </View>
         
@@ -411,6 +442,23 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 8,
   },
+  extendedNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8F5E8',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginHorizontal: 20,
+    marginBottom: 10,
+  },
+  extendedNoticeText: {
+    color: '#4CAF50',
+    fontWeight: '600',
+    marginLeft: 8,
+    fontSize: 14,
+  },
   warningContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -472,6 +520,11 @@ const styles = StyleSheet.create({
   priceText: {
     color: '#337DFF',
     fontSize: 16,
+  },
+  extendedIndicator: {
+    color: '#4CAF50',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   actionContainer: {
     flexDirection: 'row',

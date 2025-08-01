@@ -202,7 +202,7 @@ export default function MapPage() {
         ref={mapRef}
       >
         <UrlTile
-          urlTemplate="http://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          urlTemplate="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
           maximumZ={19}
         />
 
