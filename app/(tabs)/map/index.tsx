@@ -1,15 +1,3 @@
-/*
-1. tap on map to drop a Pin
-2.View available parking zones as renderedMarkers
-3. Search for location
-4. Jump to present "shorcut" location (Home, Office, Recent Visit)
-
-Key feature:
-1. google street view fallbacks: Uses a getStreetViewImage() helper function to fetch Google Street View thumbnails per parking location, with usage capped at 200 requests (MAX_USAGE).
-2.Map integration: Uses react-native-maps’ MapView, Marker, UrlTile. Supports user interactions like pressing on the map to drop a pin (handleMapPress) and animating to preset locations (flyTo()).
-3. parking zone fetching: useEffect() fetches JSON data from the Calgary Open Data API.
-*/
-
 import LocationShortcutButton from "@/components/LocationShortcutButton";
 import ParkingDetailModal from "@/components/ParkingDetailModal";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,8 +13,8 @@ import {
 } from "react-native";
 import MapView, { Marker, PROVIDER_DEFAULT, UrlTile } from "react-native-maps";
 
-let streetViewUsageCount = 0; //streetViewUsageCount: Limits how many street view images are fetched.
-const MAX_USAGE = 200; //to make sure i am not getting charge for the google API
+let streetViewUsageCount = 0;
+const MAX_USAGE = 200;
 const getStreetViewImage = (
   lat: number,
   lng: number,
@@ -40,17 +28,17 @@ const getStreetViewImage = (
 const SHORTCUTS = {
   Home: {
     label: "Home",
-    latitude: 51.045, // 9 Ave SW
+    latitude: 51.045,
     longitude: -114.065,
   },
   Office: {
     label: "Office",
-    latitude: 51.0465, // 2 St SW
+    latitude: 51.0465,
     longitude: -114.063,
   },
   Recent: {
     label: "Recent Visit",
-    latitude: 51.051, // 25 Ave SW
+    latitude: 51.051,
     longitude: -114.071,
   },
 };
@@ -71,15 +59,11 @@ export default function MapPage() {
     label: string;
   };
 
-  const mapRef = useRef<MapView | null>(null); //Reference to the map for controlling it (e.g., zoom/fly).
+  const mapRef = useRef<MapView | null>(null);
   const router = useRouter();
-  const [marker, setMarker] = useState<{
-    //Stores a user-dropped pin (lat/lng).
-    latitude: number;
-    longitude: number;
-  } | null>(null);
+  const [marker, setMarker] = useState<{ latitude: number; longitude: number } | null>(null);
   const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
-  const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null); // The marker user tapped to show a modal.
+  const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
   const [flyToLabel, setFlyToLabel] = useState<FlyToLabel | null>(null);
 
   const handleMapPress = (event: {
@@ -89,7 +73,6 @@ export default function MapPage() {
     setMarker(coordinate);
   };
 
-  //Moves the map to the given lat/lng using animation.
   const flyTo = ({
     latitude,
     longitude,
@@ -185,7 +168,24 @@ export default function MapPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#CCDBFD" />
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+      {/* Header with Search Icon and Title */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.push("/map/Search")}
+          style={styles.headerIcon}
+        >
+          <View style={styles.searchIconBox}>
+            <Ionicons name="search" size={20} color="#84B4FF" />
+          </View>
+        </TouchableOpacity>
+
+        <Text style={styles.headerTitle}>Map</Text>
+
+        {/* Empty view to balance flex */}
+        <View style={styles.headerIcon} />
+      </View>
 
       <MapView
         key={parkingLots.length > 0 ? "loaded" : "loading"}
@@ -210,9 +210,7 @@ export default function MapPage() {
           <Marker
             coordinate={marker}
             title="Dropped Pin"
-            description={`${marker.latitude.toFixed(
-              4
-            )}, ${marker.longitude.toFixed(4)}`}
+            description={`${marker.latitude.toFixed(4)}, ${marker.longitude.toFixed(4)}`}
           />
         )}
 
@@ -232,13 +230,6 @@ export default function MapPage() {
           </Marker>
         )}
       </MapView>
-
-      <TouchableOpacity
-        style={styles.searchButton}
-        onPress={() => router.push("/map/Search")}
-      >
-        <Ionicons name="search" size={24} color="white" />
-      </TouchableOpacity>
 
       <View style={styles.shortcutsRow}>
         <LocationShortcutButton
@@ -269,9 +260,7 @@ export default function MapPage() {
         address={selectedLot?.address || "No address"}
         latitude={selectedLot?.latitude || 0}
         longitude={selectedLot?.longitude || 0}
-        imageUrl={
-          selectedLot?.imageUrl || "https://via.placeholder.com/300x200"
-        }
+        imageUrl={selectedLot?.imageUrl || "https://via.placeholder.com/300x200"}
         googleApiKey={apiKey || ""}
         onClose={() => setSelectedLot(null)}
         onMoreDetail={() => {
@@ -286,32 +275,70 @@ export default function MapPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#CCDBFD",
+    backgroundColor: "#84B4FF", 
     position: "relative",
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+    marginTop: 56, 
+    backgroundColor: "#fff",
     zIndex: 1,
+  },
+  header: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 56,
+    backgroundColor: "#abcafcff",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    zIndex: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#bbb",
+  },
+  headerIcon: {
+    width: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#fff",
+    textAlign: "center",
+    flex: 1,
+  },
+  searchIconBox: {
+    backgroundColor: "#fff", 
+    borderRadius: 18,
+    width: 36,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
   },
   searchButton: {
     position: "absolute",
     top: 50,
     left: 20,
     backgroundColor: "#84B4FF",
-    padding: 10,
-    borderRadius: 24,
+    padding: 12,
+    borderRadius: 28,
     zIndex: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
   shortcutsRow: {
     position: "absolute",
     bottom: 10,
-    left: 0,
-    right: 0,
+    left: 5,
+    right: 5,
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "center",
+    alignItems: "center",
     zIndex: 11,
-    shadowColor: "#000",
   },
   parkingMarker: {
     width: 32,
@@ -331,7 +358,7 @@ const styles = StyleSheet.create({
   },
   listButton: {
     position: "absolute",
-    top: 100,
+    top: 80, // moved a bit up
     left: 20,
     backgroundColor: "#4B70FF",
     paddingVertical: 8,

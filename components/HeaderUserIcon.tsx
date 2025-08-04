@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Alert, TouchableOpacity } from "react-native";
 
+
 export default function HeaderUserIcon() {
   const router = useRouter();
   const [userFirstName, setUserFirstName] = useState<string | null>(null);

@@ -3,6 +3,7 @@ import { getBookingsByUser } from "@/lib/booking_crud";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+
 import {
   Image,
   ScrollView,
@@ -11,6 +12,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+
 
 const BookingCard = ({ booking }: { booking: Booking }) => {
   const router = useRouter();
@@ -129,13 +132,13 @@ export default function RecordScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F5F5F5" },
   header: {
-    backgroundColor: "#90CAF9",
+    backgroundColor: "#84B4FF",
     paddingTop: 40,
     paddingBottom: 16,
     paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
     borderBottomWidth: 2,
     borderBottomColor: "#1976D2",
   },
