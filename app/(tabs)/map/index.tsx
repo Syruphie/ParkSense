@@ -37,6 +37,27 @@ const getStreetViewImage = (
   return `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=90&pitch=10&key=${apiKey}`;
 };
 
+function getDistanceMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+
+  const R = 6371000; // Earth radius in meters
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
 const SHORTCUTS = {
   Home: {
     label: "Home",
@@ -156,7 +177,25 @@ export default function MapPage() {
           })
           .filter((lot): lot is ParkingLot => lot !== null);
 
-        setParkingLots(parsed);
+        const deduplicated: ParkingLot[] = [];
+
+        parsed.forEach((lot) => {
+          const nearbyLots = deduplicated.filter((d) => {
+            const distance = getDistanceMeters(
+              d.latitude,
+              d.longitude,
+              lot.latitude,
+              lot.longitude
+            );
+            return distance < 250; // Only keep one within 50m radius
+          });
+
+          if (nearbyLots.length < 2) {
+            deduplicated.push(lot);
+          }
+        });
+
+        setParkingLots(deduplicated); // ✅ Use deduplicated instead of parsed
       } catch (err) {
         console.error("Failed to fetch zone data:", err);
       }
@@ -165,23 +204,39 @@ export default function MapPage() {
     fetchParkingZones();
   }, []);
 
-  const renderedMarkers = useMemo(
-    () =>
-      parkingLots
-        .filter((lot) => !isNaN(lot.latitude) && !isNaN(lot.longitude))
-        .map((lot) => (
-          <Marker
-            key={lot.id}
-            coordinate={{ latitude: lot.latitude, longitude: lot.longitude }}
-            onPress={() => setSelectedLot(lot)}
-          >
-            <View style={styles.parkingMarker}>
-              <Text style={styles.parkingText}>P</Text>
-            </View>
-          </Marker>
-        )),
-    [parkingLots]
-  );
+  const renderedMarkers = useMemo(() => {
+    let nearbyLots = parkingLots;
+
+    console.log("marker is", marker);
+
+    if (marker) {
+      nearbyLots = parkingLots
+        .filter((lot) => {
+          const distance = getDistanceMeters(
+            marker.latitude,
+            marker.longitude,
+            lot.latitude,
+            lot.longitude
+          );
+          return distance <= 100;
+        })
+        .slice(0, 2); // Only take the 2 nearest ones
+    }
+
+    return nearbyLots
+      .filter((lot) => !isNaN(lot.latitude) && !isNaN(lot.longitude))
+      .map((lot) => (
+        <Marker
+          key={lot.id}
+          coordinate={{ latitude: lot.latitude, longitude: lot.longitude }}
+          onPress={() => setSelectedLot(lot)}
+        >
+          <View style={styles.parkingMarker}>
+            <Text style={styles.parkingText}>P</Text>
+          </View>
+        </Marker>
+      ));
+  }, [parkingLots, marker]);
 
   return (
     <SafeAreaView style={styles.container}>
