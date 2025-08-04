@@ -19,13 +19,18 @@ import {
 // Import our types and helpers
 import {
   CalgaryParkingLot,
-  createBookingParams
+  createBookingParams,
 } from "../../types/calgary-parking";
 
 const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "";
 if (!apiKey) console.warn("⚠️ GOOGLE_API_KEY is missing!");
 
-function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function haversineDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
   const toRad = (x: number) => (x * Math.PI) / 180;
   const R = 6371;
   const dLat = toRad(lat2 - lat1);
@@ -44,7 +49,9 @@ export default function ParkingDetails() {
   const [distanceKm, setDistanceKm] = useState<string | null>(null);
   const [durationText, setDurationText] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [imageUrl, setImageUrl] = useState("https://via.placeholder.com/300x200");
+  const [imageUrl, setImageUrl] = useState(
+    "https://via.placeholder.com/300x200"
+  );
 
   const fetchFromCoords = async (lat: number, lng: number) => {
     try {
@@ -68,7 +75,7 @@ export default function ParkingDetails() {
         console.warn("No matching parking zone within 200m");
         setLot({
           address_desc: "No matching parking zone within 200m",
-          zone_type: "Parking Zone"
+          zone_type: "Parking Zone",
         });
       }
 
@@ -101,7 +108,12 @@ export default function ParkingDetails() {
     }
   };
 
-  const fetchDrivingTime = async (fromLat: number, fromLng: number, toLat: number, toLng: number): Promise<string | null> => {
+  const fetchDrivingTime = async (
+    fromLat: number,
+    fromLng: number,
+    toLat: number,
+    toLng: number
+  ): Promise<string | null> => {
     try {
       const res = await fetch(
         `https://maps.googleapis.com/maps/api/directions/json?origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&mode=driving&key=${apiKey}`
@@ -201,7 +213,8 @@ export default function ParkingDetails() {
             const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=0&pitch=10&radius=50&key=${apiKey}`;
             setImageUrl(streetViewUrl);
 
-            const { status } = await Location.requestForegroundPermissionsAsync();
+            const { status } =
+              await Location.requestForegroundPermissionsAsync();
             if (status === "granted") {
               const userLocation = await Location.getCurrentPositionAsync({});
               const distance = haversineDistance(
@@ -233,7 +246,8 @@ export default function ParkingDetails() {
 
     if (place_id) fetchFromGooglePlace();
     else if (id) fetchCalgaryParking();
-    else if (lat && lng) fetchFromCoords(parseFloat(lat as string), parseFloat(lng as string));
+    else if (lat && lng)
+      fetchFromCoords(parseFloat(lat as string), parseFloat(lng as string));
     else setLoading(false);
   }, [id, place_id]);
 
@@ -295,7 +309,7 @@ export default function ParkingDetails() {
             parseFloat(lat as string) || undefined,
             parseFloat(lng as string) || undefined
           );
-          
+
           router.push({
             pathname: "/booking",
             params: bookingParams,

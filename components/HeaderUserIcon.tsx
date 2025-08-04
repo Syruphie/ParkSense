@@ -14,23 +14,30 @@ export default function HeaderUserIcon() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) {
+      if (!session || !session.user) {
         console.warn("No session found. Possibly guest user.");
+        setUserFirstName(null);
         return;
       }
 
       const { data, error } = await supabase.auth.getUser();
 
-      if (error) {
-        console.error("Failed to fetch user:", error.message);
+      if (error || !data?.user) {
+        console.error("Failed to fetch user:", error?.message);
+        setUserFirstName(null);
         return;
       }
 
-      const firstName = data?.user?.user_metadata?.first_name;
+      console.log("SESSION OBJECT:", session);
+      console.log("USER METADATA:", data.user.user_metadata);
+
+      const firstName = data.user.user_metadata?.first_name;
+
       if (firstName) {
         setUserFirstName(firstName);
       } else {
-        console.log("Logged in but first_name is missing");
+        console.log("Authenticated but first_name missing in metadata");
+        setUserFirstName(null);
       }
     };
 
@@ -41,8 +48,8 @@ export default function HeaderUserIcon() {
     if (userFirstName) {
       // Logged-in user
       Alert.alert(
-        `Loging Out? ${userFirstName}`,
-        `Are you sure you want to log out?`,
+        `Logging Out? ${userFirstName}`,
+        "Are you sure you want to log out?",
         [
           { text: "Cancel", style: "cancel" },
           {
@@ -50,14 +57,11 @@ export default function HeaderUserIcon() {
             style: "destructive",
             onPress: async () => {
               const { error } = await supabase.auth.signOut();
-
               if (error) {
                 console.error("Logout failed:", error.message);
                 Alert.alert("Error", "Failed to log out. Please try again.");
               } else {
-                console.log(
-                  `Logout successful. Redirecting ${userFirstName} to login...`
-                );
+                console.log("Logout successful. Redirecting to login...");
                 router.replace("/login");
               }
             },
