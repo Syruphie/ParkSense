@@ -1,5 +1,6 @@
 import type { Booking } from "@/lib/booking_crud";
-import { getAllBookings } from "@/lib/booking_crud";
+import { getBookingsByUser } from "@/lib/booking_crud";
+import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -78,20 +79,26 @@ export default function RecordScreen() {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const data = await getAllBookings();
-        setBookings(data);
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (error || !user) throw new Error("User not found");
+
+        const userBookings = await getBookingsByUser(user.id);
+        setBookings(userBookings);
       } catch (error) {
         if (error instanceof Error) {
           console.error("Failed to fetch bookings:", error.message);
         } else {
-          console.error("Unknown error:", error);
+          console.error("Unknown error fetching bookings:", error);
         }
       }
     };
 
     fetchBookings();
   }, []);
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
