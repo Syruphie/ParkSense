@@ -17,6 +17,7 @@ const { width } = Dimensions.get("window");
 
 export default function CheckoutSuccessPage() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const {
     full_name,
     address,
@@ -32,7 +33,18 @@ export default function CheckoutSuccessPage() {
     price_zone,
     globalid_guid,
     booking_id,
-  } = useLocalSearchParams();
+  } = params ?? {};
+
+  useEffect(() => {
+    // Wait for router to be ready before navigating
+    const timeout = setTimeout(() => {
+      if (!booking_id) {
+        router.replace("/login"); // Or "/" or any fallback
+      }
+    }, 0); // Ensure this runs after first render
+
+    return () => clearTimeout(timeout);
+  }, [booking_id]);
 
   // Fallback zone display if no zone data
   const getZoneDisplay = () => {
@@ -135,7 +147,7 @@ export default function CheckoutSuccessPage() {
   };
 
   const navigateToMap = () => {
-    router.replace("/(tabs)/map");
+    router.replace("/(tabs)");
   };
 
   const sendReceipt = () => {
