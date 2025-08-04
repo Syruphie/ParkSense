@@ -39,9 +39,9 @@ export default function OpenStreetMapPage() {
         // Not with `provider="google"`
       >
         <UrlTile
-          urlTemplate="http://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          urlTemplate="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
           maximumZ={19}
-          flipY={false}
+          
         />
         {marker && (
           <Marker

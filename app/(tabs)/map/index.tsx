@@ -1,3 +1,15 @@
+/*
+1. tap on map to drop a Pin
+2.View available parking zones as renderedMarkers
+3. Search for location
+4. Jump to present "shorcut" location (Home, Office, Recent Visit)
+
+Key feature:
+1. google street view fallbacks: Uses a getStreetViewImage() helper function to fetch Google Street View thumbnails per parking location, with usage capped at 200 requests (MAX_USAGE).
+2.Map integration: Uses react-native-maps’ MapView, Marker, UrlTile. Supports user interactions like pressing on the map to drop a pin (handleMapPress) and animating to preset locations (flyTo()).
+3. parking zone fetching: useEffect() fetches JSON data from the Calgary Open Data API.
+*/
+
 import LocationShortcutButton from "@/components/LocationShortcutButton";
 import ParkingDetailModal from "@/components/ParkingDetailModal";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,9 +25,13 @@ import {
 } from "react-native";
 import MapView, { Marker, PROVIDER_DEFAULT, UrlTile } from "react-native-maps";
 
-let streetViewUsageCount = 0;
-const MAX_USAGE = 200;
-const getStreetViewImage = (lat, lng, apiKey) => {
+let streetViewUsageCount = 0; //streetViewUsageCount: Limits how many street view images are fetched.
+const MAX_USAGE = 200; //to make sure i am not getting charge for the google API
+const getStreetViewImage = (
+  lat: number,
+  lng: number,
+  apiKey: string
+): string | null => {
   if (streetViewUsageCount >= MAX_USAGE) return null;
   streetViewUsageCount++;
   return `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=90&pitch=10&key=${apiKey}`;
@@ -40,18 +56,49 @@ const SHORTCUTS = {
 };
 
 export default function MapPage() {
-  const mapRef = useRef(null);
-  const router = useRouter();
-  const [marker, setMarker] = useState(null);
-  const [parkingLots, setParkingLots] = useState([]);
-  const [selectedLot, setSelectedLot] = useState(null);
+  type ParkingLot = {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    address: string;
+    imageUrl: string;
+  };
 
-  const handleMapPress = (event) => {
+  type FlyToLabel = {
+    latitude: number;
+    longitude: number;
+    label: string;
+  };
+
+  const mapRef = useRef<MapView | null>(null); //Reference to the map for controlling it (e.g., zoom/fly).
+  const router = useRouter();
+  const [marker, setMarker] = useState<{
+    //Stores a user-dropped pin (lat/lng).
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
+  const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null); // The marker user tapped to show a modal.
+  const [flyToLabel, setFlyToLabel] = useState<FlyToLabel | null>(null);
+
+  const handleMapPress = (event: {
+    nativeEvent: { coordinate: { latitude: number; longitude: number } };
+  }) => {
     const { coordinate } = event.nativeEvent;
     setMarker(coordinate);
   };
 
-  const flyTo = ({ latitude, longitude }) => {
+  //Moves the map to the given lat/lng using animation.
+  const flyTo = ({
+    latitude,
+    longitude,
+    label,
+  }: {
+    latitude: number;
+    longitude: number;
+    label: string;
+  }) => {
     mapRef.current?.animateToRegion(
       {
         latitude,
@@ -61,9 +108,12 @@ export default function MapPage() {
       },
       1000
     );
+
+    setFlyToLabel({ latitude, longitude, label });
   };
+
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
-  if (!apiKey) console.warn("⚠️ GOOGLE_API_KEY is missing!");
+  if (!apiKey) console.warn("GOOGLE_API_KEY is missing!");
 
   useEffect(() => {
     const fetchParkingZones = async () => {
@@ -100,11 +150,11 @@ export default function MapPage() {
                 getStreetViewImage(
                   lat,
                   lng,
-                  process.env.EXPO_PUBLIC_GOOGLE_API_KEY
+                  process.env.EXPO_PUBLIC_GOOGLE_API_KEY || ""
                 ) || "https://via.placeholder.com/300x200",
             };
           })
-          .filter(Boolean);
+          .filter((lot): lot is ParkingLot => lot !== null);
 
         setParkingLots(parsed);
       } catch (err) {
@@ -152,7 +202,7 @@ export default function MapPage() {
         ref={mapRef}
       >
         <UrlTile
-          urlTemplate="http://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          urlTemplate="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
           maximumZ={19}
         />
 
@@ -167,6 +217,20 @@ export default function MapPage() {
         )}
 
         {renderedMarkers}
+
+        {flyToLabel && (
+          <Marker
+            coordinate={{
+              latitude: flyToLabel.latitude,
+              longitude: flyToLabel.longitude,
+            }}
+            anchor={{ x: 0.5, y: 1.5 }}
+          >
+            <View style={styles.flyToPopup}>
+              <Text style={styles.flyToPopupText}>{flyToLabel.label}</Text>
+            </View>
+          </Marker>
+        )}
       </MapView>
 
       <TouchableOpacity
@@ -179,15 +243,15 @@ export default function MapPage() {
       <View style={styles.shortcutsRow}>
         <LocationShortcutButton
           label="Home"
-          onPress={() => flyTo(SHORTCUTS.Home)}
+          onPress={() => flyTo({ ...SHORTCUTS.Home, label: "Home" })}
         />
         <LocationShortcutButton
           label="Office"
-          onPress={() => flyTo(SHORTCUTS.Office)}
+          onPress={() => flyTo({ ...SHORTCUTS.Office, label: "Office" })}
         />
         <LocationShortcutButton
           label="Recent Visit"
-          onPress={() => flyTo(SHORTCUTS.Recent)}
+          onPress={() => flyTo({ ...SHORTCUTS.Recent, label: "Recent Visit" })}
         />
       </View>
 
@@ -281,5 +345,21 @@ const styles = StyleSheet.create({
     color: "white",
     marginLeft: 6,
     fontWeight: "600",
+  },
+  flyToPopup: {
+    backgroundColor: "#003f88",
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  flyToPopupText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 20,
   },
 });

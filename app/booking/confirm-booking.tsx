@@ -1,20 +1,42 @@
-// app/confirm-booking.tsx
+// app/booking/confirm-booking.tsx - FIXED VERSION
 "use client";
 
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+// Import our helper functions
+import { supabase } from "@/lib/supabase";
+import { generateSpotNumber, getZoneDisplay } from "../types/calgary-parking";
 
 export default function ConfirmBookingPage() {
   const router = useRouter();
-  const { full_name, address, time_start, time_end, duration, total, license } =
-    useLocalSearchParams();
+  const [loading, setLoading] = useState(false);
+  
+  const {
+    full_name,
+    address,
+    time_start,
+    time_end,
+    duration,
+    total,
+    license,
+    // Add these new params from the API
+    permit_zone,
+    stall_id,
+    zone_type,
+    address_desc,
+    price_zone,
+    globalid_guid,
+    date,
+  } = useLocalSearchParams();
 
   const formatTime = (iso: any) =>
     new Date(iso).toLocaleTimeString([], {
@@ -22,12 +44,130 @@ export default function ConfirmBookingPage() {
       minute: "2-digit",
     });
 
+  // Use helper functions instead of local ones
+  const lotData = {
+    permit_zone,
+    zone_type,
+    price_zone,
+    stall_id,
+  };
+
+  const zoneDisplay = getZoneDisplay(lotData);
+  const spotNumber = generateSpotNumber(lotData);
+
+  const safeToString = (val: string | string[] | undefined): string =>
+    Array.isArray(val) ? val[0] : val ?? "";
+
+const handleConfirmBooking = async () => {
+  setLoading(true);
+  
+  try {
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      Alert.alert("Error", "You must be logged in to make a booking");
+      return;
+    }
+
+    console.log("User ID:", user.id);
+
+    // Use name from form params or auth metadata (skip database lookup for now)
+    const firstName = user.user_metadata?.first_name || "Test";
+    const lastName = user.user_metadata?.last_name || "User";
+    
+    console.log("Using name:", firstName, lastName);
+
+    // Mock payment process
+    Alert.alert(
+      "🧪 Mock Payment",
+      `Simulating payment for $${total}`,
+      [
+        {
+          text: "❌ Simulate Failure",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert("Payment Failed", "This is a simulated payment failure for testing.");
+          }
+        },
+        // Inside handleConfirmBooking > under '✅ Simulate Success'
+        {
+          text: "✅ Simulate Success",
+          onPress: async () => {
+            // ✅ Move the insert INSIDE this function
+            const { error: insertError } = await supabase
+              .from("bookings")
+              .insert({
+                user_id: user.id,
+                first_name: firstName,
+                last_name: lastName,
+                address: safeToString(address_desc || address),
+                time_start: safeToString(time_start),
+                time_end: safeToString(time_end),
+                duration: Number(duration),
+                total: Number(total),
+                license: safeToString(license),
+                zone: zoneDisplay,
+                spot: spotNumber,
+                booking_date: safeToString(date),
+              });
+
+            if (insertError) {
+              console.error("Insert failed:", insertError.message);
+              Alert.alert(
+                "Booking Failed",
+                "Could not save booking. Please try again."
+              );
+              return;
+            }
+
+            // Proceed only after successful insert
+            proceedToSuccess({ first_name: firstName, last_name: lastName });
+          },
+        },
+        {
+          text: "Cancel",
+          style: "cancel"
+        }
+      ]
+    );
+
+  } catch (error) {
+    console.error("Error in handleConfirmBooking:", error);
+    Alert.alert("Error", "An unexpected error occurred");
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const proceedToSuccess = (profile: any) => {
+    // Navigate to success page with all the data
+    router.push({
+      pathname: "/booking/checkout-success",
+      params: {
+        full_name: `${profile.first_name} ${profile.last_name}`.trim(),
+        address: safeToString(address_desc || address),
+        time_start: safeToString(time_start),
+        time_end: safeToString(time_end),
+        duration: safeToString(duration),
+        total: safeToString(total),  
+        license: safeToString(license),
+        zone: zoneDisplay,
+        spot: spotNumber,
+        permit_zone: safeToString(permit_zone),
+        zone_type: safeToString(zone_type),
+        price_zone: safeToString(price_zone),
+        globalid_guid: safeToString(globalid_guid),
+        booking_id: `MOCK${Math.floor(Math.random() * 100000)}`,
+        booking_date: safeToString(date),
+      },
+    });
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* <Text style={styles.header}>Confirm Booking</Text> */}
-
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Details</Text>
+        <Text style={styles.sectionTitle}>Booking Details</Text>
 
         <View style={styles.detailRow}>
           <Text style={styles.label}>Full name:</Text>
@@ -36,8 +176,27 @@ export default function ConfirmBookingPage() {
 
         <View style={styles.detailRow}>
           <Text style={styles.label}>Location:</Text>
-          <Text style={styles.value}>{address}</Text>
+          <Text style={styles.value}>{address_desc || address}</Text>
         </View>
+
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Zone:</Text>
+          <Text style={styles.value}>{zoneDisplay}</Text>
+        </View>
+
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Spot:</Text>
+          <Text style={styles.value}>#{spotNumber}</Text>
+        </View>
+
+        {date && (
+          <View style={styles.detailRow}>
+            <Text style={styles.label}>Booking Date:</Text>
+            <Text style={styles.value}>
+              {new Date(safeToString(date)).toDateString()}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.detailRow}>
           <Text style={styles.label}>Time:</Text>
@@ -47,7 +206,7 @@ export default function ConfirmBookingPage() {
         </View>
 
         <View style={styles.detailRow}>
-          <Text style={styles.label}>Period:</Text>
+          <Text style={styles.label}>Duration:</Text>
           <Text style={styles.value}>
             {duration} hour{Number(duration) > 1 ? "s" : ""}
           </Text>
@@ -60,15 +219,29 @@ export default function ConfirmBookingPage() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Select Payment Type</Text>
+        <Text style={styles.sectionTitle}>🧪 Mock Payment Options</Text>
 
-        <TouchableOpacity style={styles.applePayBtn}>
-          <Text style={styles.applePayText}>Pay with  Pay</Text>
+        <TouchableOpacity 
+          style={[styles.applePayBtn, loading && styles.disabledBtn]}
+          onPress={handleConfirmBooking}
+          disabled={loading}
+        >
+          <Text style={styles.applePayText}>🧪 Test Apple Pay</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.googlePayBtn}>
-          <Text style={styles.googlePayText}>Pay with Google Pay</Text>
+        <TouchableOpacity 
+          style={[styles.googlePayBtn, loading && styles.disabledBtn]}
+          onPress={handleConfirmBooking}
+          disabled={loading}
+        >
+          <Text style={styles.googlePayText}>🧪 Test Google Pay</Text>
         </TouchableOpacity>
+
+        <View style={styles.mockWarning}>
+          <Text style={styles.mockWarningText}>
+            💡 No real payments will be processed in test mode
+          </Text>
+        </View>
       </View>
 
       <Text style={styles.totalText}>
@@ -80,25 +253,21 @@ export default function ConfirmBookingPage() {
         <TouchableOpacity
           style={styles.cancelBtn}
           onPress={() => router.back()}
+          disabled={loading}
         >
           <Text style={styles.btnText}>Cancel</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.confirmBtn}
-          onPress={() =>
-            router.push({
-              pathname: "/booking/remaining-time",
-              params: {
-                zone: "ZONE 1",
-                spot: "32B",
-                time_start: "2025-07-22T16:05:00.000Z",
-                time_end: "2025-07-22T17:05:00.000Z",
-              },
-            })
-          }
+          style={[styles.confirmBtn, loading && styles.disabledBtn]}
+          onPress={handleConfirmBooking}
+          disabled={loading}
         >
-          <Text style={styles.btnText}>Confirm Booking</Text>
+          {loading ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <Text style={styles.btnText}>Confirm Booking</Text>
+          )}
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -111,17 +280,6 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
     flexGrow: 1,
-  },
-  header: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#fff",
-    backgroundColor: "#92C3FF",
-    alignSelf: "center",
-    paddingHorizontal: 40,
-    paddingVertical: 12,
-    borderRadius: 18,
-    marginBottom: 20,
   },
   card: {
     borderColor: "#aaa",
@@ -156,6 +314,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: "#ddd",
   },
   applePayText: {
     fontWeight: "bold",
@@ -166,11 +326,27 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 6,
     alignItems: "center",
+    marginBottom: 12,
   },
   googlePayText: {
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,
+  },
+  disabledBtn: {
+    opacity: 0.6,
+  },
+  mockWarning: {
+    backgroundColor: "#E8F5E8",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  mockWarningText: {
+    fontSize: 12,
+    color: "#2E7D32",
+    textAlign: "center",
+    fontStyle: "italic",
   },
   totalText: {
     fontSize: 18,
@@ -194,6 +370,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     elevation: 3,
+    minWidth: 120,
+    alignItems: "center",
   },
   btnText: {
     color: "#fff",

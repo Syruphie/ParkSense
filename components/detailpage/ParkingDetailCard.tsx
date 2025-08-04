@@ -1,21 +1,30 @@
+import { CalgaryParkingLot } from "@/app/types/calgary-parking";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-export default function ParkingDetailCard({ lot }) {
-  const parseHtmlRate = (html) => {
+interface Props {
+  lot: CalgaryParkingLot;
+}
+
+export default function ParkingDetailCard({ lot }: Props) {
+  const parseHtmlRate = (html: string) => {
     const regex = /<b>(.*?)<\/b><br><br>\$?([\d.]+)?(?: per Hour)?/gi;
     const entries = [];
     let match;
 
     while ((match = regex.exec(html))) {
       const dayTime = match[1];
-      const rate = match[2] ? `$${parseFloat(match[2]).toFixed(2)}` : "Free";
+      const rawRate = match[2];
+
+      // Skip "Free" or empty price blocks
+      if (!rawRate || parseFloat(rawRate) === 0) continue;
+
+      const rate = `$${parseFloat(rawRate).toFixed(2)}`;
       entries.push({ dayTime, rate });
     }
 
     return entries;
   };
-
   const parsedRates = parseHtmlRate(lot.html_zone_rate || "");
   const maxStay = lot.max_time
     ? `${(parseFloat(lot.max_time) / 60).toFixed(1)} hours`
@@ -32,7 +41,7 @@ export default function ParkingDetailCard({ lot }) {
           </View>
         ))
       ) : (
-        <Text style={styles.value}>No rate info</Text>
+        <Text style={styles.value}>No rate info, default $0</Text>
       )}
 
       <View style={[styles.row, { marginTop: 12 }]}>

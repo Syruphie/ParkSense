@@ -1,48 +1,56 @@
+import { User } from "@/lib/object_types";
 import { supabase } from "./supabase";
 
-export interface UserDetails {
-  uuid?: string;
-  FirstName: string;
-  LastName: string;
-  Email: string;
-  password?: string;
+const table_name = "user_details";
+
+export async function getAllUsers() {
+  const { data, error } = await supabase
+    .from(table_name)
+    .select("*")
+    .order("email", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching users: ", error);
+    throw error;
+  }
+  return data;
 }
 
-const tableName = "user_details";
+export const addUser = async (user: User) => {
+  const { error } = await supabase.from("user_details").insert([
+    {
+      uuid: user.uuid,
+      email: user.email,
+      first_name: user.first_name, // Map camelCase → PascalCase
+      last_name: user.last_name,
+    },
+  ]);
 
-export const createUser = async (user: UserDetails) => {
+  if (error) throw error;
+};
+
+export async function updateUser(user_id: string, user: User) {
   const { data, error } = await supabase
-    .from(tableName)
-    .insert([user])
-    .select();
-  if (error) throw error;
-  return data;
-};
+    .from(table_name)
+    .update(user)
+    .eq("uuid", user_id); // ✅ use 'uuid' instead of 'id'
 
-export const getUsers = async () => {
+  if (error) {
+    console.error(`Error updating user with ID ${user_id}: `, error);
+    throw error;
+  }
+  return data;
+}
+
+export async function deleteUser(user_id: string) {
   const { data, error } = await supabase
-    .from(tableName)
-    .select("*")
-    .order("FirstName", { ascending: true });
-  if (error) throw error;
-  return data;
-};
+    .from(table_name)
+    .delete()
+    .eq("uuid", user_id); // ✅ use 'uuid' instead of 'id'
 
-export const updateUser = async (
-  uuid: string,
-  updates: Partial<UserDetails>
-) => {
-  const { data, error } = await supabase
-    .from(tableName)
-    .update(updates)
-    .eq("uuid", uuid)
-    .select();
-  if (error) throw error;
+  if (error) {
+    console.error(`Error deleting user with ID ${user_id}: `, error);
+    throw error;
+  }
   return data;
-};
-
-export const deleteUser = async (uuid: string) => {
-  const { error } = await supabase.from(tableName).delete().eq("uuid", uuid);
-  if (error) throw error;
-  return true;
-};
+}
