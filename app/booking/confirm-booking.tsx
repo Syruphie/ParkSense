@@ -19,7 +19,7 @@ import { generateSpotNumber, getZoneDisplay } from "../types/calgary-parking";
 export default function ConfirmBookingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  
+
   const {
     full_name,
     address,
@@ -58,56 +58,72 @@ export default function ConfirmBookingPage() {
   const safeToString = (val: string | string[] | undefined): string =>
     Array.isArray(val) ? val[0] : val ?? "";
 
-const handleConfirmBooking = async () => {
-  setLoading(true);
-  
-  try {
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      Alert.alert("Error", "You must be logged in to make a booking");
-      return;
-    }
+  const handleConfirmBooking = async () => {
+    setLoading(true);
 
-    console.log("User ID:", user.id);
+    try {
+      // Get current user
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    // Use name from form params or auth metadata (skip database lookup for now)
-    const firstName = user.user_metadata?.first_name || "Test";
-    const lastName = user.user_metadata?.last_name || "User";
-    
-    console.log("Using name:", firstName, lastName);
+      if (userError || !user) {
+        Alert.alert(
+          "Login Required",
+          "You must be logged in to make a booking.",
+          [
+            {
+              text: "Go to Login",
+              onPress: () => router.push("/login"),
+              style: "default",
+            },
+            {
+              text: "OK",
+              style: "cancel",
+            },
+          ]
+        );
+        return;
+      }
 
-    // Mock payment process
-    Alert.alert(
-      "🧪 Mock Payment",
-      `Simulating payment for $${total}`,
-      [
+      console.log("User ID:", user.id);
+
+      // Use name from form params or auth metadata (skip database lookup for now)
+      const firstName = user.user_metadata?.first_name || "Test";
+      const lastName = user.user_metadata?.last_name || "User";
+
+      console.log("Using name:", firstName, lastName);
+
+      // Mock payment process
+      Alert.alert("🧪 Mock Payment", `Simulating payment for $${total}`, [
         {
           text: "❌ Simulate Failure",
           style: "destructive",
           onPress: () => {
-            Alert.alert("Payment Failed", "This is a simulated payment failure for testing.");
-          }
+            Alert.alert(
+              "Payment Failed",
+              "This is a simulated payment failure for testing."
+            );
+          },
         },
         {
           text: "✅ Simulate Success",
-          onPress: () => proceedToSuccess({ first_name: firstName, last_name: lastName })
+          onPress: () =>
+            proceedToSuccess({ first_name: firstName, last_name: lastName }),
         },
         {
           text: "Cancel",
-          style: "cancel"
-        }
-      ]
-    );
-
-  } catch (error) {
-    console.error("Error in handleConfirmBooking:", error);
-    Alert.alert("Error", "An unexpected error occurred");
-  } finally {
-    setLoading(false);
-  }
-};
+          style: "cancel",
+        },
+      ]);
+    } catch (error) {
+      console.error("Error in handleConfirmBooking:", error);
+      Alert.alert("Error", "An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const proceedToSuccess = (profile: any) => {
     // Navigate to success page with all the data
@@ -119,7 +135,7 @@ const handleConfirmBooking = async () => {
         time_start: safeToString(time_start),
         time_end: safeToString(time_end),
         duration: safeToString(duration),
-        total: safeToString(total),  
+        total: safeToString(total),
         license: safeToString(license),
         zone: zoneDisplay,
         spot: spotNumber,
@@ -190,7 +206,7 @@ const handleConfirmBooking = async () => {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>🧪 Mock Payment Options</Text>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.applePayBtn, loading && styles.disabledBtn]}
           onPress={handleConfirmBooking}
           disabled={loading}
@@ -198,7 +214,7 @@ const handleConfirmBooking = async () => {
           <Text style={styles.applePayText}>🧪 Test Apple Pay</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.googlePayBtn, loading && styles.disabledBtn]}
           onPress={handleConfirmBooking}
           disabled={loading}
