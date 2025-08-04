@@ -1,12 +1,21 @@
+/*
+1. tap on map to drop a Pin
+2.View available parking zones as renderedMarkers
+3. Search for location
+4. Jump to present "shorcut" location (Home, Office, Recent Visit)
+
+Key feature:
+1. google street view fallbacks: Uses a getStreetViewImage() helper function to fetch Google Street View thumbnails per parking location, with usage capped at 200 requests (MAX_USAGE).
+2.Map integration: Uses react-native-maps’ MapView, Marker, UrlTile. Supports user interactions like pressing on the map to drop a pin (handleMapPress) and animating to preset locations (flyTo()).
+3. parking zone fetching: useEffect() fetches JSON data from the Calgary Open Data API.
+*/
 
 import LocationShortcutButton from "@/components/LocationShortcutButton";
 import ParkingDetailModal from "@/components/ParkingDetailModal";
 import { Ionicons } from "@expo/vector-icons";
-import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   SafeAreaView,
   StatusBar,
   StyleSheet,
@@ -72,13 +81,6 @@ export default function MapPage() {
   const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
   const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null); // The marker user tapped to show a modal.
   const [flyToLabel, setFlyToLabel] = useState<FlyToLabel | null>(null);
-  
-  // NEW: Location state
-  const [userLocation, setUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const [locationPermissionGranted, setLocationPermissionGranted] = useState(false);
 
   const handleMapPress = (event: {
     nativeEvent: { coordinate: { latitude: number; longitude: number } };
@@ -110,73 +112,8 @@ export default function MapPage() {
     setFlyToLabel({ latitude, longitude, label });
   };
 
-  // NEW: Function to get user's current location
-  const getUserLocation = async () => {
-    try {
-      // Request permission to access location
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      
-      if (status !== 'granted') {
-        setLocationPermissionGranted(false);
-        Alert.alert(
-          'Location Permission',
-          'Permission to access location was denied. The app will show Calgary downtown area.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      setLocationPermissionGranted(true);
-
-      // Get current position
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const { latitude, longitude } = location.coords;
-      setUserLocation({ latitude, longitude });
-
-      // Animate map to user's location
-      mapRef.current?.animateToRegion(
-        {
-          latitude,
-          longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        },
-        1500
-      );
-
-    } catch (error) {
-      console.error('Error getting location:', error);
-      Alert.alert(
-        'Location Error',
-        'Could not get your current location. Showing Calgary downtown area.',
-        [{ text: 'OK' }]
-      );
-    }
-  };
-
-  // NEW: Function to center on user location (for manual trigger)
-  const centerOnUserLocation = () => {
-    if (userLocation) {
-      flyTo({
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
-        label: "Your Location"
-      });
-    } else {
-      getUserLocation();
-    }
-  };
-
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
   if (!apiKey) console.warn("GOOGLE_API_KEY is missing!");
-
-  // NEW: Get user location on component mount
-  useEffect(() => {
-    getUserLocation();
-  }, []);
 
   useEffect(() => {
     const fetchParkingZones = async () => {
@@ -254,8 +191,8 @@ export default function MapPage() {
         key={parkingLots.length > 0 ? "loaded" : "loading"}
         style={styles.map}
         initialRegion={{
-          latitude: userLocation?.latitude || 51.0447,
-          longitude: userLocation?.longitude || -114.0719,
+          latitude: 51.0447,
+          longitude: -114.0719,
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }}
@@ -263,9 +200,6 @@ export default function MapPage() {
         provider={PROVIDER_DEFAULT}
         mapType="none"
         ref={mapRef}
-        showsUserLocation={locationPermissionGranted}
-        showsMyLocationButton={false}
-        followsUserLocation={false}
       >
         <UrlTile
           urlTemplate="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
@@ -304,14 +238,6 @@ export default function MapPage() {
         onPress={() => router.push("/map/Search")}
       >
         <Ionicons name="search" size={24} color="white" />
-      </TouchableOpacity>
-
-      {/* NEW: Custom "My Location" button */}
-      <TouchableOpacity
-        style={styles.locationButton}
-        onPress={centerOnUserLocation}
-      >
-        <Ionicons name="locate" size={24} color="white" />
       </TouchableOpacity>
 
       <View style={styles.shortcutsRow}>
@@ -371,16 +297,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 50,
     left: 20,
-    backgroundColor: "#84B4FF",
-    padding: 10,
-    borderRadius: 24,
-    zIndex: 10,
-  },
-  // NEW: Location button style
-  locationButton: {
-    position: "absolute",
-    top: 50,
-    right: 20,
     backgroundColor: "#84B4FF",
     padding: 10,
     borderRadius: 24,
