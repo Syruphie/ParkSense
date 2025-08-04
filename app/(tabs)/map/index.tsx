@@ -1,12 +1,21 @@
+/*
+1. tap on map to drop a Pin
+2.View available parking zones as renderedMarkers
+3. Search for location
+4. Jump to present "shorcut" location (Home, Office, Recent Visit)
+
+Key feature:
+1. google street view fallbacks: Uses a getStreetViewImage() helper function to fetch Google Street View thumbnails per parking location, with usage capped at 200 requests (MAX_USAGE).
+2.Map integration: Uses react-native-maps’ MapView, Marker, UrlTile. Supports user interactions like pressing on the map to drop a pin (handleMapPress) and animating to preset locations (flyTo()).
+3. parking zone fetching: useEffect() fetches JSON data from the Calgary Open Data API.
+*/
 
 import LocationShortcutButton from "@/components/LocationShortcutButton";
 import ParkingDetailModal from "@/components/ParkingDetailModal";
 import { Ionicons } from "@expo/vector-icons";
-import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   SafeAreaView,
   StatusBar,
   StyleSheet,
@@ -14,7 +23,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, PROVIDER_DEFAULT, UrlTile } from "react-native-maps";
 
 let streetViewUsageCount = 0; //streetViewUsageCount: Limits how many street view images are fetched.
 const MAX_USAGE = 200; //to make sure i am not getting charge for the google API
@@ -26,25 +35,6 @@ const getStreetViewImage = (
   if (streetViewUsageCount >= MAX_USAGE) return null;
   streetViewUsageCount++;
   return `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=90&pitch=10&key=${apiKey}`;
-};
-
-const haversineDistance = (
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number => {
-  const R = 6371e3; // Earth radius in meters
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
 };
 
 const SHORTCUTS = {
@@ -91,13 +81,6 @@ export default function MapPage() {
   const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
   const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null); // The marker user tapped to show a modal.
   const [flyToLabel, setFlyToLabel] = useState<FlyToLabel | null>(null);
-  
-  // NEW: Location state
-  const [userLocation, setUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const [locationPermissionGranted, setLocationPermissionGranted] = useState(false);
 
   const handleMapPress = (event: {
     nativeEvent: { coordinate: { latitude: number; longitude: number } };
@@ -129,73 +112,8 @@ export default function MapPage() {
     setFlyToLabel({ latitude, longitude, label });
   };
 
-  // NEW: Function to get user's current location
-  const getUserLocation = async () => {
-    try {
-      // Request permission to access location
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      
-      if (status !== 'granted') {
-        setLocationPermissionGranted(false);
-        Alert.alert(
-          'Location Permission',
-          'Permission to access location was denied. The app will show Calgary downtown area.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      setLocationPermissionGranted(true);
-
-      // Get current position
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const { latitude, longitude } = location.coords;
-      setUserLocation({ latitude, longitude });
-
-      // Animate map to user's location
-      mapRef.current?.animateToRegion(
-        {
-          latitude,
-          longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        },
-        1500
-      );
-
-    } catch (error) {
-      console.error('Error getting location:', error);
-      Alert.alert(
-        'Location Error',
-        'Could not get your current location. Showing Calgary downtown area.',
-        [{ text: 'OK' }]
-      );
-    }
-  };
-
-  // NEW: Function to center on user location (for manual trigger)
-  const centerOnUserLocation = () => {
-    if (userLocation) {
-      flyTo({
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
-        label: "Your Location"
-      });
-    } else {
-      getUserLocation();
-    }
-  };
-
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
   if (!apiKey) console.warn("GOOGLE_API_KEY is missing!");
-
-  // NEW: Get user location on component mount
-  useEffect(() => {
-    getUserLocation();
-  }, []);
 
   useEffect(() => {
     const fetchParkingZones = async () => {
@@ -238,27 +156,7 @@ export default function MapPage() {
           })
           .filter((lot): lot is ParkingLot => lot !== null);
 
-        // After `parsed` is built (array of ParkingLot)
-        const deduplicated: ParkingLot[] = [];
-
-        parsed.forEach((lot) => {
-          // Find existing group within 50m
-          const nearbyLots = deduplicated.filter(
-            (d) =>
-              haversineDistance(
-                d.latitude,
-                d.longitude,
-                lot.latitude,
-                lot.longitude
-              ) < 250
-          );
-
-          if (nearbyLots.length < 2) {
-            deduplicated.push(lot);
-          }
-        });
-
-        setParkingLots(deduplicated);
+        setParkingLots(parsed);
       } catch (err) {
         console.error("Failed to fetch zone data:", err);
       }
@@ -293,16 +191,21 @@ export default function MapPage() {
         key={parkingLots.length > 0 ? "loaded" : "loading"}
         style={styles.map}
         initialRegion={{
-          latitude: userLocation?.latitude || 51.0447,
-          longitude: userLocation?.longitude || -114.0719,
+          latitude: 51.0447,
+          longitude: -114.0719,
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }}
         onPress={handleMapPress}
-        showsUserLocation={locationPermissionGranted}
-        showsMyLocationButton={false}
-        followsUserLocation={false}
+        provider={PROVIDER_DEFAULT}
+        mapType="none"
+        ref={mapRef}
       >
+        <UrlTile
+          urlTemplate="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+          maximumZ={19}
+        />
+
         {marker && (
           <Marker
             coordinate={marker}
@@ -335,14 +238,6 @@ export default function MapPage() {
         onPress={() => router.push("/map/Search")}
       >
         <Ionicons name="search" size={24} color="white" />
-      </TouchableOpacity>
-
-      {/* NEW: Custom "My Location" button */}
-      <TouchableOpacity
-        style={styles.locationButton}
-        onPress={centerOnUserLocation}
-      >
-        <Ionicons name="locate" size={24} color="white" />
       </TouchableOpacity>
 
       <View style={styles.shortcutsRow}>
@@ -402,16 +297,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 50,
     left: 20,
-    backgroundColor: "#84B4FF",
-    padding: 10,
-    borderRadius: 24,
-    zIndex: 10,
-  },
-  // NEW: Location button style
-  locationButton: {
-    position: "absolute",
-    top: 50,
-    right: 20,
     backgroundColor: "#84B4FF",
     padding: 10,
     borderRadius: 24,
