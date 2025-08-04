@@ -107,10 +107,40 @@ export default function ConfirmBookingPage() {
             );
           },
         },
+        // Inside handleConfirmBooking > under '✅ Simulate Success'
         {
           text: "✅ Simulate Success",
-          onPress: () =>
-            proceedToSuccess({ first_name: firstName, last_name: lastName }),
+          onPress: async () => {
+            // ✅ Move the insert INSIDE this function
+            const { error: insertError } = await supabase
+              .from("bookings")
+              .insert({
+                user_id: user.id,
+                first_name: firstName,
+                last_name: lastName,
+                address: safeToString(address_desc || address),
+                time_start: safeToString(time_start),
+                time_end: safeToString(time_end),
+                duration: Number(duration),
+                total: Number(total),
+                license: safeToString(license),
+                zone: zoneDisplay,
+                spot: spotNumber,
+                booking_date: safeToString(date),
+              });
+
+            if (insertError) {
+              console.error("Insert failed:", insertError.message);
+              Alert.alert(
+                "Booking Failed",
+                "Could not save booking. Please try again."
+              );
+              return;
+            }
+
+            // Proceed only after successful insert
+            proceedToSuccess({ first_name: firstName, last_name: lastName });
+          },
         },
         {
           text: "Cancel",
