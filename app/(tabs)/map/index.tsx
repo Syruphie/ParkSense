@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, PROVIDER_DEFAULT, UrlTile } from "react-native-maps";
 
 let streetViewUsageCount = 0; //streetViewUsageCount: Limits how many street view images are fetched.
 const MAX_USAGE = 200; //to make sure i am not getting charge for the google API
@@ -26,25 +26,6 @@ const getStreetViewImage = (
   if (streetViewUsageCount >= MAX_USAGE) return null;
   streetViewUsageCount++;
   return `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&fov=80&heading=90&pitch=10&key=${apiKey}`;
-};
-
-const haversineDistance = (
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number => {
-  const R = 6371e3; // Earth radius in meters
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
 };
 
 const SHORTCUTS = {
@@ -238,27 +219,7 @@ export default function MapPage() {
           })
           .filter((lot): lot is ParkingLot => lot !== null);
 
-        // After `parsed` is built (array of ParkingLot)
-        const deduplicated: ParkingLot[] = [];
-
-        parsed.forEach((lot) => {
-          // Find existing group within 50m
-          const nearbyLots = deduplicated.filter(
-            (d) =>
-              haversineDistance(
-                d.latitude,
-                d.longitude,
-                lot.latitude,
-                lot.longitude
-              ) < 250
-          );
-
-          if (nearbyLots.length < 2) {
-            deduplicated.push(lot);
-          }
-        });
-
-        setParkingLots(deduplicated);
+        setParkingLots(parsed);
       } catch (err) {
         console.error("Failed to fetch zone data:", err);
       }
@@ -299,10 +260,18 @@ export default function MapPage() {
           longitudeDelta: 0.01,
         }}
         onPress={handleMapPress}
+        provider={PROVIDER_DEFAULT}
+        mapType="none"
+        ref={mapRef}
         showsUserLocation={locationPermissionGranted}
         showsMyLocationButton={false}
         followsUserLocation={false}
       >
+        <UrlTile
+          urlTemplate="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+          maximumZ={19}
+        />
+
         {marker && (
           <Marker
             coordinate={marker}
