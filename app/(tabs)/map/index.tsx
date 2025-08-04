@@ -23,7 +23,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker, PROVIDER_DEFAULT, UrlTile } from "react-native-maps";
+import MapView, { Marker } from "react-native-maps";
 
 let streetViewUsageCount = 0; //streetViewUsageCount: Limits how many street view images are fetched.
 const MAX_USAGE = 200; //to make sure i am not getting charge for the google API
@@ -252,15 +252,8 @@ export default function MapPage() {
           longitudeDelta: 0.01,
         }}
         onPress={handleMapPress}
-        provider={PROVIDER_DEFAULT}
-        mapType="none"
         ref={mapRef}
       >
-        <UrlTile
-          urlTemplate="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
-          maximumZ={19}
-        />
-
         {marker && (
           <Marker
             coordinate={marker}
