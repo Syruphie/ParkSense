@@ -29,6 +29,17 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
     last_name,
   } = booking;
 
+  // Get Google Maps API key from env
+  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
+
+  // Use address or zone as map center
+  const mapCenter = address || zone || "Toronto";
+  const zoneImageUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(
+    mapCenter
+  )}&zoom=16&size=400x200&maptype=roadmap&markers=color:green|${encodeURIComponent(
+    mapCenter
+  )}&key=${apiKey}`;
+
   const handlePress = () => {
     router.push({
       pathname: "/record/recording",
@@ -63,8 +74,9 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
           </Text>
         </View>
         <Image
-          source={{ uri: "https://source.unsplash.com/parking" }}
+          source={{ uri: zoneImageUrl }}
           style={styles.image}
+          resizeMode="cover"
         />
       </View>
     </TouchableOpacity>
