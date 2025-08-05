@@ -1,5 +1,7 @@
 // app/components/LoginScreen.tsx - Updated with DB insert on SignUp
+import { addUser } from "@/lib/supabase_crud";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -48,7 +50,34 @@ export default function LoginScreen() {
       }
 
       const user = data.user;
-      console.log("User logged in:", user);
+
+      const { data: existingUser } = await supabase
+        .from("user_details")
+        .select("uuid")
+        .eq("uuid", user.id)
+        .single();
+
+      if (!existingUser) {
+        const pending = await AsyncStorage.getItem("pendingUserDetails");
+
+        if (pending) {
+          const { email, first_name, last_name } = JSON.parse(pending);
+
+          await addUser({
+            uuid: user.id,
+            email,
+            first_name,
+            last_name,
+          });
+
+          console.log("✅ Inserted user_details from stored data");
+
+          // Clear temp storage
+          await AsyncStorage.removeItem("pendingUserDetails");
+        } else {
+          console.warn("⚠️ No pending user data found after login");
+        }
+      }
 
       const isFirstNameMissing = !user.user_metadata?.first_name;
       const isLastNameMissing = !user.user_metadata?.last_name;
@@ -120,21 +149,16 @@ export default function LoginScreen() {
       }
 
       if (data?.user) {
-        const { id } = data.user;
-
-        const { error: insertError } = await supabase
-          .from("user_details")
-          .insert({
-            uuid: id,
-            FirstName: firstName,
-            LastName: lastName,
-          });
-
-        if (insertError) {
-          console.warn("Failed to insert user details:", insertError.message);
-        } else {
-          console.log("User details inserted to user_details table");
-        }
+        // Temporarily store the user info
+        await AsyncStorage.setItem(
+          "pendingUserDetails",
+          JSON.stringify({
+            email,
+            first_name: firstName,
+            last_name: lastName,
+          })
+        );
+        console.log("✅ Stored pending user details for later insert");
       }
 
       Alert.alert(
