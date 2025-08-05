@@ -1,21 +1,10 @@
-/*
-1. tap on map to drop a Pin
-2.View available parking zones as renderedMarkers
-3. Search for location
-4. Jump to present "shorcut" location (Home, Office, Recent Visit)
-
-Key feature:
-1. google street view fallbacks: Uses a getStreetViewImage() helper function to fetch Google Street View thumbnails per parking location, with usage capped at 200 requests (MAX_USAGE).
-2.Map integration: Uses react-native-maps’ MapView, Marker, UrlTile. Supports user interactions like pressing on the map to drop a pin (handleMapPress) and animating to preset locations (flyTo()).
-3. parking zone fetching: useEffect() fetches JSON data from the Calgary Open Data API.
-*/
-
 import LocationShortcutButton from "@/components/LocationShortcutButton";
 import ParkingDetailModal from "@/components/ParkingDetailModal";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Platform,
   SafeAreaView,
   StatusBar,
   StyleSheet,
@@ -25,8 +14,9 @@ import {
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 
-let streetViewUsageCount = 0; //streetViewUsageCount: Limits how many street view images are fetched.
-const MAX_USAGE = 200; //to make sure i am not getting charge for the google API
+let streetViewUsageCount = 0;
+const MAX_USAGE = 200;
+
 const getStreetViewImage = (
   lat: number,
   lng: number,
@@ -44,34 +34,30 @@ function getDistanceMeters(
   lon2: number
 ): number {
   const toRad = (value: number) => (value * Math.PI) / 180;
-
-  const R = 6371000; // Earth radius in meters
+  const R = 6371000;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
-
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
   return R * c;
 }
 
 const SHORTCUTS = {
   Home: {
     label: "Home",
-    latitude: 51.045, // 9 Ave SW
+    latitude: 51.045,
     longitude: -114.065,
   },
   Office: {
     label: "Office",
-    latitude: 51.0465, // 2 St SW
+    latitude: 51.0465,
     longitude: -114.063,
   },
   Recent: {
     label: "Recent Visit",
-    latitude: 51.051, // 25 Ave SW
+    latitude: 51.051,
     longitude: -114.071,
   },
 };
@@ -92,15 +78,14 @@ export default function MapPage() {
     label: string;
   };
 
-  const mapRef = useRef<MapView | null>(null); //Reference to the map for controlling it (e.g., zoom/fly).
+  const mapRef = useRef<MapView | null>(null);
   const router = useRouter();
   const [marker, setMarker] = useState<{
-    //Stores a user-dropped pin (lat/lng).
     latitude: number;
     longitude: number;
   } | null>(null);
   const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
-  const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null); // The marker user tapped to show a modal.
+  const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
   const [flyToLabel, setFlyToLabel] = useState<FlyToLabel | null>(null);
 
   const handleMapPress = (event: {
@@ -110,7 +95,6 @@ export default function MapPage() {
     setMarker(coordinate);
   };
 
-  //Moves the map to the given lat/lng using animation.
   const flyTo = ({
     latitude,
     longitude,
@@ -129,7 +113,6 @@ export default function MapPage() {
       },
       1000
     );
-
     setFlyToLabel({ latitude, longitude, label });
   };
 
@@ -168,11 +151,8 @@ export default function MapPage() {
               longitude: lng,
               address,
               imageUrl:
-                getStreetViewImage(
-                  lat,
-                  lng,
-                  process.env.EXPO_PUBLIC_GOOGLE_API_KEY || ""
-                ) || "https://via.placeholder.com/300x200",
+                getStreetViewImage(lat, lng, apiKey || "") ||
+                "https://via.placeholder.com/300x200",
             };
           })
           .filter((lot): lot is ParkingLot => lot !== null);
@@ -187,7 +167,7 @@ export default function MapPage() {
               lot.latitude,
               lot.longitude
             );
-            return distance < 250; // Only keep one within 50m radius
+            return distance < 250;
           });
 
           if (nearbyLots.length < 2) {
@@ -195,7 +175,7 @@ export default function MapPage() {
           }
         });
 
-        setParkingLots(deduplicated); // ✅ Use deduplicated instead of parsed
+        setParkingLots(deduplicated);
       } catch (err) {
         console.error("Failed to fetch zone data:", err);
       }
@@ -206,9 +186,6 @@ export default function MapPage() {
 
   const renderedMarkers = useMemo(() => {
     let nearbyLots = parkingLots;
-
-    console.log("marker is", marker);
-
     if (marker) {
       nearbyLots = parkingLots
         .filter((lot) => {
@@ -220,7 +197,7 @@ export default function MapPage() {
           );
           return distance <= 100;
         })
-        .slice(0, 2); // Only take the 2 nearest ones
+        .slice(0, 2);
     }
 
     return nearbyLots
@@ -240,7 +217,21 @@ export default function MapPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#CCDBFD" />
+      <StatusBar barStyle="light-content" backgroundColor="#003f88" />
+
+      {/* ✅ Cross-platform header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.push("/map/Search")}
+          style={styles.headerIcon}
+        >
+          <Ionicons name="search" size={24} color="#fff" />
+        </TouchableOpacity>
+
+        <Text style={styles.headerTitle}>Map</Text>
+
+        <View style={styles.headerSpacer} />
+      </View>
 
       <MapView
         key={parkingLots.length > 0 ? "loaded" : "loading"}
@@ -280,13 +271,6 @@ export default function MapPage() {
           </Marker>
         )}
       </MapView>
-
-      <TouchableOpacity
-        style={styles.searchButton}
-        onPress={() => router.push("/map/Search")}
-      >
-        <Ionicons name="search" size={24} color="white" />
-      </TouchableOpacity>
 
       <View style={styles.shortcutsRow}>
         <LocationShortcutButton
@@ -341,25 +325,44 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
   },
-  searchButton: {
+  header: {
     position: "absolute",
-    top: 50,
-    left: 20,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: Platform.select({ ios: 100, android: 60 }),
+    paddingTop: Platform.select({ ios: 44, android: StatusBar.currentHeight || 20 }),
     backgroundColor: "#84B4FF",
-    padding: 10,
-    borderRadius: 24,
-    zIndex: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 15,
+    zIndex: 15,
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  headerIcon: {
+    padding: 5,
+  },
+  headerSpacer: {
+    width: 24,
   },
   shortcutsRow: {
     position: "absolute",
-    bottom: 10,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    zIndex: 11,
-    shadowColor: "#000",
+  bottom: 20,
+  left: 0,
+  right: 0,
+  flexDirection: "row",
+  justifyContent: "center",
+  alignItems: "center",
+  gap: 10, // optional: spacing between buttons (requires RN 0.71+)
+  paddingHorizontal: 20,
+  zIndex: 11,
   },
   parkingMarker: {
     width: 32,
@@ -379,7 +382,7 @@ const styles = StyleSheet.create({
   },
   listButton: {
     position: "absolute",
-    top: 100,
+    top: Platform.select({ ios: 110, android: 80 }),
     left: 20,
     backgroundColor: "#4B70FF",
     paddingVertical: 8,
