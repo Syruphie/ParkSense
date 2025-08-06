@@ -27,6 +27,8 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
     booking_id,
     first_name,
     last_name,
+    latitude,
+    longitude,
   } = booking;
 
   // Get Google Maps API key from env
@@ -34,11 +36,17 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
 
   // Use address or zone as map center
   const mapCenter = address || zone || "Toronto";
-  const zoneImageUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(
-    mapCenter
-  )}&zoom=16&size=400x200&maptype=roadmap&markers=color:green|${encodeURIComponent(
-    mapCenter
-  )}&key=${apiKey}`;
+
+  const zoneImageUrl =
+    latitude && longitude
+      ? `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${latitude},${longitude}&fov=80&heading=0&pitch=10&radius=50&key=${apiKey}`
+      : "https://via.placeholder.com/300x200";
+
+  // const zoneImageUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(
+  //   mapCenter
+  // )}&zoom=16&size=400x200&maptype=roadmap&markers=color:green|${encodeURIComponent(
+  //   mapCenter
+  // )}&key=${apiKey}`;
 
   const handlePress = () => {
     router.push({
@@ -73,6 +81,7 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
             / {duration}h
           </Text>
         </View>
+
         <Image
           source={{ uri: zoneImageUrl }}
           style={styles.image}

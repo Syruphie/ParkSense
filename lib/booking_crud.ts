@@ -17,8 +17,10 @@ export type Booking = {
   time_end: string;
   duration: number;
   total: number;
-  booking_date: string; // ✅ NEW
+  booking_date: string;
   created_at?: string;
+  latitude?: number;
+  longitude?: number;
 };
 
 export async function addBooking(booking: Booking) {
@@ -29,6 +31,25 @@ export async function addBooking(booking: Booking) {
     throw error;
   }
 
+  return data;
+}
+
+export async function updateBookingCoordinates(
+  booking_id: string,
+  latitude: number,
+  longitude: number
+) {
+  const { data, error } = await supabase
+    .from(table)
+    .update({ latitude, longitude })
+    .eq("booking_id", booking_id);
+
+  if (error) {
+    console.error("❌ Error updating coordinates:", error.message);
+    throw error;
+  }
+
+  console.log("✅ Coordinates updated:", data);
   return data;
 }
 

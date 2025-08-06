@@ -16,6 +16,30 @@ import {
 import { supabase } from "@/lib/supabase";
 import { generateSpotNumber, getZoneDisplay } from "../types/calgary-parking";
 
+async function getLatLngFromAddress(
+  address: string
+): Promise<[number, number] | null> {
+  try {
+    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
+    const encodedAddress = encodeURIComponent(address);
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${apiKey}`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status === "OK" && data.results.length > 0) {
+      const { lat, lng } = data.results[0].geometry.location;
+      return [lat, lng];
+    }
+
+    console.warn("Geocoding failed:", data.status);
+    return null;
+  } catch (error) {
+    console.error("Error fetching geocode:", error);
+    return null;
+  }
+}
+
 export default function ConfirmBookingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -111,23 +135,41 @@ export default function ConfirmBookingPage() {
         {
           text: "✅ Simulate Success",
           onPress: async () => {
-            // ✅ Move the insert INSIDE this function
+            function cleanAddress(raw: string) {
+              const mainPart = raw.split("Fr")[0]?.trim().replace(/,$/, ""); // remove trailing comma
+              return `${mainPart}, Calgary, AB`;
+            }
+
+            const fullAddress = cleanAddress(
+              safeToString(address_desc || address)
+            );
+
+            console.log("🧭 Full address used for geocoding:", fullAddress);
+            const coords = await getLatLngFromAddress(fullAddress);
+
+            const [latitude, longitude] = coords ?? [null, null];
+            console.log("Lat/Lng from address:", latitude, longitude);
+
             const { error: insertError } = await supabase
               .from("bookings")
-              .insert({
-                user_id: user.id,
-                first_name: firstName,
-                last_name: lastName,
-                address: safeToString(address_desc || address),
-                time_start: safeToString(time_start),
-                time_end: safeToString(time_end),
-                duration: Number(duration),
-                total: Number(total),
-                license: safeToString(license),
-                zone: zoneDisplay,
-                spot: spotNumber,
-                booking_date: safeToString(date),
-              });
+              .insert([
+                {
+                  user_id: user.id,
+                  first_name: firstName,
+                  last_name: lastName,
+                  address: fullAddress,
+                  time_start: safeToString(time_start),
+                  time_end: safeToString(time_end),
+                  duration: Number(duration),
+                  total: Number(total),
+                  license: safeToString(license),
+                  zone: zoneDisplay,
+                  spot: spotNumber,
+                  booking_date: safeToString(date),
+                  latitude,
+                  longitude,
+                },
+              ]);
 
             if (insertError) {
               console.error("Insert failed:", insertError.message);
@@ -138,7 +180,7 @@ export default function ConfirmBookingPage() {
               return;
             }
 
-            // Proceed only after successful insert
+            // Proceed after successful insert
             proceedToSuccess({ first_name: firstName, last_name: lastName });
           },
         },
